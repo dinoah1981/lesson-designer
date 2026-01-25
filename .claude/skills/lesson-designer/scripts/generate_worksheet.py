@@ -24,7 +24,7 @@ from typing import Dict, Any, List, Optional
 
 from docx import Document
 from docx.shared import Inches, Pt, Twips
-from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
@@ -89,15 +89,16 @@ def add_instructions(doc: Document, text: str) -> None:
         run.font.size = Pt(10)
 
 
-def add_answer_lines(doc: Document, num_lines: int = 2, prefix: str = "") -> None:
-    """Add underscore answer lines for student responses."""
+def add_answer_lines(doc: Document, num_lines: int = 3, prefix: str = "") -> None:
+    """Add underscore answer lines with double-spacing for student responses."""
     for i in range(num_lines):
         line_text = prefix if i == 0 and prefix else ""
         p = doc.add_paragraph(line_text + "_" * 70)
-        p.paragraph_format.space_before = Pt(3)
-        p.paragraph_format.space_after = Pt(3)
+        p.paragraph_format.line_spacing = 2.0  # Double-spaced
+        p.paragraph_format.space_before = Pt(6)
+        p.paragraph_format.space_after = Pt(6)
         for run in p.runs:
-            run.font.size = Pt(10)
+            run.font.size = Pt(11)  # Slightly larger for readability
 
 
 def add_ranking_table(doc: Document, items: List[str], columns: List[str] = None) -> None:
@@ -155,16 +156,17 @@ def add_definition_table(doc: Document, terms: List[Dict]) -> None:
     doc.add_paragraph()
 
 
-def add_numbered_questions(doc: Document, questions: List[str], with_answer_space: bool = True) -> None:
+def add_numbered_questions(doc: Document, questions: List[str], with_answer_space: bool = True, num_lines: int = 3) -> None:
     """Add numbered questions with answer space."""
     for i, question in enumerate(questions, 1):
         p = doc.add_paragraph()
         run = p.add_run(f"{i}. {question}")
-        run.font.size = Pt(10)
-        p.paragraph_format.space_after = Pt(3)
+        run.font.size = Pt(11)
+        p.paragraph_format.line_spacing = 2.0  # Double-spaced
+        p.paragraph_format.space_after = Pt(6)
 
         if with_answer_space:
-            add_answer_lines(doc, 2)
+            add_answer_lines(doc, num_lines)
 
 
 def add_exit_ticket(doc: Document, questions: List[str]) -> None:
@@ -181,7 +183,7 @@ def add_exit_ticket(doc: Document, questions: List[str]) -> None:
 
     doc.add_paragraph()
 
-    add_numbered_questions(doc, questions, with_answer_space=True)
+    add_numbered_questions(doc, questions, with_answer_space=True, num_lines=4)
 
 
 def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
@@ -265,7 +267,7 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
             student_output = activity.get('student_output', '')
             if student_output:
                 add_instructions(doc, f"Your task: {student_output}")
-            add_answer_lines(doc, 4)
+            add_answer_lines(doc, 5)
 
         # Default: simple answer space
         else:
