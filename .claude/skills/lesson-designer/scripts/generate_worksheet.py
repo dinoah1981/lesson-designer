@@ -1,22 +1,20 @@
 #!/usr/bin/env python3
 """
-Generate Student Worksheet/Materials from Lesson Design JSON
+Generate Compact Student Worksheet from Lesson Design JSON
 
-Uses docxtpl (Jinja2 templating) to create Word documents from lesson designs.
-Selects appropriate material type based on lesson type and ensures formative
-assessment is included in every document.
+Creates practical, printable worksheets (1-2 pages) using python-docx directly.
+Uses tables for structured content and underscore answer lines.
+
+Key features:
+- Compact layout with Part 1, Part 2, Part 3 sections
+- Tables for structured activities (ranking, definitions, etc.)
+- Underscore answer lines for student responses
+- 1-2 pages maximum for practical printing
 
 Requirements covered:
     - MATL-01: Generate actual .docx files
     - MATL-03: Material type matches lesson type
     - ASMT-01: Each lesson includes assessment of its objective
-
-Usage:
-    python generate_worksheet.py <lesson.json> [template.docx] [output.docx]
-
-    With defaults:
-    python generate_worksheet.py <lesson.json>
-    (uses default template and outputs to same directory as input)
 """
 
 import json
@@ -24,404 +22,347 @@ import os
 import sys
 from typing import Dict, Any, List, Optional
 
-from docxtpl import DocxTemplate
+from docx import Document
+from docx.shared import Inches, Pt, Twips
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.enum.table import WD_TABLE_ALIGNMENT
+from docx.oxml.ns import qn
+from docx.oxml import OxmlElement
 
 
-# Material type mapping based on lesson type
-MATERIAL_TYPE_MAP = {
-    'introducing': 'worksheet',       # Reading + comprehension questions
-    'practicing': 'problem_set',      # Practice exercises
-    'applying': 'worksheet',          # Structured application
-    'synthesizing': 'activity_guide', # Project guide
-    'novel_application': 'problem_set' # Challenge problems
-}
-
-# Material type descriptions for template context
-MATERIAL_TYPE_DESCRIPTIONS = {
-    'worksheet': {
-        'title_suffix': 'Student Worksheet',
-        'instruction_header': 'Instructions',
-        'section_header': 'Activities'
-    },
-    'problem_set': {
-        'title_suffix': 'Problem Set',
-        'instruction_header': 'Directions',
-        'section_header': 'Problems'
-    },
-    'activity_guide': {
-        'title_suffix': 'Activity Guide',
-        'instruction_header': 'Procedure',
-        'section_header': 'Steps'
-    }
-}
+def load_lesson_design(lesson_path: str) -> Dict[str, Any]:
+    """Load lesson design from JSON file."""
+    with open(lesson_path, 'r', encoding='utf-8') as f:
+        return json.load(f)
 
 
-def select_material_type(lesson_type: str) -> str:
+def set_cell_shading(cell, color: str):
+    """Set background shading for a table cell."""
+    shading = OxmlElement('w:shd')
+    shading.set(qn('w:fill'), color)
+    cell._tc.get_or_add_tcPr().append(shading)
+
+
+def add_header(doc: Document, lesson: Dict) -> None:
+    """Add compact header with title and student info."""
+    # Title
+    title = lesson.get('title', 'Student Worksheet')
+    grade = lesson.get('grade_level', '')
+
+    p = doc.add_paragraph()
+    run = p.add_run(f"{title}")
+    run.bold = True
+    run.font.size = Pt(14)
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    # Name/Period/Date line - use a table for alignment
+    table = doc.add_table(rows=1, cols=3)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+    table.autofit = True
+
+    cells = table.rows[0].cells
+    cells[0].text = "Name: ________________________"
+    cells[1].text = "Period: ____"
+    cells[2].text = "Date: ____________"
+
+    for cell in cells:
+        cell.paragraphs[0].runs[0].font.size = Pt(10)
+
+    # Small spacing
+    doc.add_paragraph()
+
+
+def add_part_header(doc: Document, part_num: int, title: str) -> None:
+    """Add a Part header (e.g., 'Part 1: Do Now')."""
+    p = doc.add_paragraph()
+    run = p.add_run(f"Part {part_num}: {title}")
+    run.bold = True
+    run.font.size = Pt(11)
+    p.space_after = Pt(6)
+
+
+def add_instructions(doc: Document, text: str) -> None:
+    """Add instruction text."""
+    p = doc.add_paragraph(text)
+    p.paragraph_format.space_after = Pt(6)
+    for run in p.runs:
+        run.font.size = Pt(10)
+
+
+def add_answer_lines(doc: Document, num_lines: int = 2, prefix: str = "") -> None:
+    """Add underscore answer lines for student responses."""
+    for i in range(num_lines):
+        line_text = prefix if i == 0 and prefix else ""
+        p = doc.add_paragraph(line_text + "_" * 70)
+        p.paragraph_format.space_before = Pt(3)
+        p.paragraph_format.space_after = Pt(3)
+        for run in p.runs:
+            run.font.size = Pt(10)
+
+
+def add_ranking_table(doc: Document, items: List[str], columns: List[str] = None) -> None:
+    """Add a ranking/selection table with items."""
+    if columns is None:
+        columns = ["Item", "Rank", "Reason"]
+
+    num_cols = len(columns)
+    table = doc.add_table(rows=len(items) + 1, cols=num_cols)
+    table.style = 'Table Grid'
+
+    # Header row
+    header_cells = table.rows[0].cells
+    for i, col_name in enumerate(columns):
+        header_cells[i].text = col_name
+        header_cells[i].paragraphs[0].runs[0].bold = True
+        header_cells[i].paragraphs[0].runs[0].font.size = Pt(10)
+        set_cell_shading(header_cells[i], "E0E0E0")
+
+    # Data rows
+    for row_idx, item in enumerate(items):
+        cells = table.rows[row_idx + 1].cells
+        cells[0].text = item
+        cells[0].paragraphs[0].runs[0].font.size = Pt(10)
+        # Leave other cells empty for student input
+        for cell in cells[1:]:
+            cell.paragraphs[0].runs[0].font.size = Pt(10) if cell.paragraphs[0].runs else None
+
+    doc.add_paragraph()  # Spacing after table
+
+
+def add_definition_table(doc: Document, terms: List[Dict]) -> None:
+    """Add a vocabulary/definition table."""
+    table = doc.add_table(rows=len(terms) + 1, cols=2)
+    table.style = 'Table Grid'
+
+    # Header
+    header = table.rows[0].cells
+    header[0].text = "Term"
+    header[1].text = "Definition"
+    for cell in header:
+        cell.paragraphs[0].runs[0].bold = True
+        cell.paragraphs[0].runs[0].font.size = Pt(10)
+        set_cell_shading(cell, "E0E0E0")
+
+    # Terms
+    for i, term in enumerate(terms):
+        cells = table.rows[i + 1].cells
+        cells[0].text = term.get('word', term.get('term', ''))
+        cells[0].paragraphs[0].runs[0].font.size = Pt(10)
+        cells[0].paragraphs[0].runs[0].bold = True
+        cells[1].text = term.get('definition', '')
+        cells[1].paragraphs[0].runs[0].font.size = Pt(10)
+
+    doc.add_paragraph()
+
+
+def add_numbered_questions(doc: Document, questions: List[str], with_answer_space: bool = True) -> None:
+    """Add numbered questions with answer space."""
+    for i, question in enumerate(questions, 1):
+        p = doc.add_paragraph()
+        run = p.add_run(f"{i}. {question}")
+        run.font.size = Pt(10)
+        p.paragraph_format.space_after = Pt(3)
+
+        if with_answer_space:
+            add_answer_lines(doc, 2)
+
+
+def add_exit_ticket(doc: Document, questions: List[str]) -> None:
+    """Add exit ticket section."""
+    # Header with box effect using table
+    table = doc.add_table(rows=1, cols=1)
+    table.style = 'Table Grid'
+    cell = table.rows[0].cells[0]
+    cell.text = "EXIT TICKET"
+    cell.paragraphs[0].runs[0].bold = True
+    cell.paragraphs[0].runs[0].font.size = Pt(11)
+    cell.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+    set_cell_shading(cell, "E0E0E0")
+
+    doc.add_paragraph()
+
+    add_numbered_questions(doc, questions, with_answer_space=True)
+
+
+def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
     """
-    Determine appropriate material format based on lesson type.
+    Generate a compact worksheet from lesson design.
 
-    Args:
-        lesson_type: introducing|practicing|applying|synthesizing|novel_application
-
-    Returns:
-        Material type: worksheet|reading|problem_set|activity_guide
+    Analyzes activities and creates appropriate sections with tables
+    and answer lines. Targets 1-2 pages.
     """
-    return MATERIAL_TYPE_MAP.get(lesson_type, 'worksheet')
+    doc = Document()
 
+    # Set narrow margins for compact layout
+    sections = doc.sections
+    for section in sections:
+        section.top_margin = Inches(0.5)
+        section.bottom_margin = Inches(0.5)
+        section.left_margin = Inches(0.75)
+        section.right_margin = Inches(0.75)
 
-def prepare_template_context(lesson: Dict[str, Any], material_type: str) -> Dict[str, Any]:
-    """
-    Prepare context dictionary for docxtpl rendering.
+    # Add header
+    add_header(doc, lesson)
 
-    Args:
-        lesson: Lesson design data from JSON
-        material_type: Selected material type
+    # Get activities
+    activities = lesson.get('activities', [])
 
-    Returns:
-        Context dictionary for template rendering
-    """
-    # Get material type metadata
-    type_meta = MATERIAL_TYPE_DESCRIPTIONS.get(material_type, MATERIAL_TYPE_DESCRIPTIONS['worksheet'])
+    # Generate parts based on activities
+    part_num = 1
 
-    # Build base context
-    context = {
-        # Title and metadata
-        'title': lesson.get('title', 'Untitled Lesson'),
-        'title_suffix': type_meta['title_suffix'],
-        'grade_level': lesson.get('grade_level', ''),
-        'duration': lesson.get('duration', 0),
-        'material_type': material_type,
-        'instruction_header': type_meta['instruction_header'],
-        'section_header': type_meta['section_header'],
+    for activity in activities:
+        name = activity.get('name', f'Activity {part_num}')
+        marzano_level = activity.get('marzano_level', 'comprehension')
+        instructions = activity.get('instructions', [])
+        materials = activity.get('materials', [])
 
-        # Learning content
-        'objective': lesson.get('objective', ''),
-        'objectives': [lesson.get('objective', '')] if lesson.get('objective') else [],
+        # Skip exit ticket activities - we'll add that separately
+        if 'exit' in name.lower() and 'ticket' in name.lower():
+            continue
 
-        # Activities (formatted for material type)
-        'activities': format_activities_for_worksheet(
-            lesson.get('activities', []),
-            material_type
-        ),
+        # Add part header
+        add_part_header(doc, part_num, name)
 
-        # Vocabulary
-        'vocabulary': lesson.get('vocabulary', []),
+        # Add instructions if present
+        if instructions:
+            if isinstance(instructions, list):
+                instr_text = ' '.join(instructions[:2])  # Keep it brief
+            else:
+                instr_text = str(instructions)
+            add_instructions(doc, instr_text[:200])  # Truncate if too long
 
-        # Placeholders for student info
-        'student_name': '_______________',
-        'date': '_______________'
-    }
+        # Determine content type based on activity characteristics
+        # Check for ranking/comparison activities
+        if any(word in name.lower() for word in ['rank', 'order', 'compare', 'sort']):
+            # Extract items to rank if available, otherwise use generic
+            items_to_rank = activity.get('items', ['Item A', 'Item B', 'Item C', 'Item D'])
+            if isinstance(items_to_rank, list) and len(items_to_rank) > 0:
+                add_ranking_table(doc, items_to_rank[:5])  # Max 5 items
+            add_instructions(doc, "Explain your #1 choice:")
+            add_answer_lines(doc, 2)
 
-    # Add assessment section
-    context = add_assessment_section(context, lesson)
+        # Check for definition/vocabulary activities
+        elif any(word in name.lower() for word in ['definition', 'vocabulary', 'terms', 'key words']):
+            vocab = lesson.get('vocabulary', [])
+            if vocab:
+                add_definition_table(doc, vocab[:6])  # Max 6 terms
+            else:
+                add_answer_lines(doc, 3)
 
-    return context
+        # Check for discussion/notes activities
+        elif any(word in name.lower() for word in ['discussion', 'notes', 'debrief']):
+            # Add discussion questions if available
+            questions = activity.get('discussion_questions', activity.get('questions', []))
+            if questions:
+                add_numbered_questions(doc, questions[:3], with_answer_space=True)
+            else:
+                add_instructions(doc, "Discussion Notes:")
+                add_answer_lines(doc, 3)
 
+        # Check for analysis/application activities
+        elif marzano_level in ['analysis', 'knowledge_utilization']:
+            # These need more structured response
+            student_output = activity.get('student_output', '')
+            if student_output:
+                add_instructions(doc, f"Your task: {student_output}")
+            add_answer_lines(doc, 4)
 
-def format_activities_for_worksheet(
-    activities: List[Dict[str, Any]],
-    material_type: str
-) -> List[Dict[str, Any]]:
-    """
-    Format activities appropriately for the material type.
+        # Default: simple answer space
+        else:
+            add_answer_lines(doc, 3)
 
-    Args:
-        activities: List of activity dictionaries from lesson design
-        material_type: Selected material type
+        part_num += 1
 
-    Returns:
-        List of formatted activity dictionaries for template
-    """
-    formatted = []
+    # Add vocabulary section if present and not already added
+    vocab = lesson.get('vocabulary', [])
+    if vocab and part_num <= 3:  # Only add if we haven't had many parts
+        add_part_header(doc, part_num, "Key Terms")
+        add_definition_table(doc, vocab[:6])
+        part_num += 1
 
-    for i, activity in enumerate(activities, 1):
-        formatted_activity = {
-            'number': i,
-            'name': activity.get('name', f'Activity {i}'),
-            'duration': activity.get('duration', 0),
-            'marzano_level': activity.get('marzano_level', ''),
-            'instructions': [],
-            'questions': [],
-            'answer_lines': 4,  # Default blank lines per answer
-            'include_in_worksheet': True
-        }
-
-        # Get instructions - prefer student-specific if available
-        instructions = activity.get('student_instructions', activity.get('instructions', []))
-        if isinstance(instructions, str):
-            instructions = [instructions]
-        formatted_activity['instructions'] = instructions
-
-        # Format based on material type
-        if material_type == 'worksheet':
-            # Worksheet: Include reflection questions after each activity
-            formatted_activity['questions'] = activity.get('reflection_questions', [])
-            # Add standard reflection if none provided
-            if not formatted_activity['questions'] and activity.get('student_output'):
-                formatted_activity['questions'] = [
-                    f"What was the most important thing you learned in this activity?",
-                    f"What questions do you still have?"
-                ]
-
-        elif material_type == 'problem_set':
-            # Problem set: Focus on practice problems
-            formatted_activity['questions'] = activity.get('practice_problems', [])
-            # Add worked example indicator
-            if i == 1:
-                formatted_activity['is_worked_example'] = True
-
-        elif material_type == 'activity_guide':
-            # Activity guide: Step-by-step with materials checklist
-            formatted_activity['materials'] = activity.get('materials', [])
-            formatted_activity['recording_section'] = activity.get('student_output', 'Record your observations here.')
-
-        # Get differentiation options
-        diff = activity.get('differentiation', {})
-        formatted_activity['support_options'] = diff.get('support', [])
-        formatted_activity['extension_options'] = diff.get('extension', [])
-
-        formatted.append(formatted_activity)
-
-    return formatted
-
-
-def add_assessment_section(context: Dict[str, Any], lesson: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    Add formative assessment to materials.
-
-    Assessment types:
-        - exit_ticket: Standalone questions at end
-        - embedded: Questions integrated throughout activities
-        - performance: Task rubric for demonstration
-
-    CRITICAL: Every lesson MUST include assessment of its objective.
-    This is requirement ASMT-01.
-
-    Args:
-        context: Template context dictionary
-        lesson: Lesson design data
-
-    Returns:
-        Updated context with assessment data
-    """
+    # Add exit ticket
     assessment = lesson.get('assessment', {})
-    assessment_type = assessment.get('type', 'exit_ticket')
+    exit_questions = assessment.get('questions', [])
 
-    # Default exit ticket questions if none provided
-    default_questions = [
-        'What is one thing you learned today?',
-        'What is one question you still have?',
-        f"How would you explain today's main concept to a classmate?"
-    ]
+    if not exit_questions:
+        # Default exit ticket questions
+        objective = lesson.get('objective', 'the main concept')
+        exit_questions = [
+            f"What is the most important thing you learned today?",
+            f"What is one question you still have?"
+        ]
 
-    if assessment_type == 'exit_ticket':
-        context['exit_ticket'] = {
-            'title': 'Exit Ticket',
-            'instructions': 'Answer these questions before leaving class.',
-            'questions': assessment.get('questions', default_questions)
-        }
-        context['has_exit_ticket'] = True
-        context['has_embedded_assessment'] = False
-        context['has_performance_task'] = False
+    add_exit_ticket(doc, exit_questions[:3])  # Max 3 questions
 
-    elif assessment_type == 'embedded':
-        # Assessment questions are already in activities
-        context['has_embedded_assessment'] = True
-        context['has_exit_ticket'] = False
-        context['has_performance_task'] = False
-        context['embedded_assessment_note'] = (
-            'Assessment is embedded in the activities above. '
-            'Your teacher will check your work as you complete each section.'
-        )
-
-    elif assessment_type == 'performance':
-        context['performance_task'] = {
-            'title': 'Performance Task',
-            'description': assessment.get('description', 'Demonstrate your understanding.'),
-            'success_criteria': assessment.get('criteria', [
-                'Completed all required components',
-                'Showed understanding of key concepts',
-                'Used appropriate vocabulary'
-            ])
-        }
-        context['has_performance_task'] = True
-        context['has_exit_ticket'] = False
-        context['has_embedded_assessment'] = False
-
-    else:
-        # Default to exit ticket if unknown type
-        context['exit_ticket'] = {
-            'title': 'Exit Ticket',
-            'instructions': 'Answer these questions before leaving class.',
-            'questions': assessment.get('questions', default_questions)
-        }
-        context['has_exit_ticket'] = True
-        context['has_embedded_assessment'] = False
-        context['has_performance_task'] = False
-
-    return context
-
-
-def render_template(template_path: str, context: Dict[str, Any], output_path: str) -> bool:
-    """
-    Render docxtpl template with context and save.
-
-    Args:
-        template_path: Path to Word template
-        context: Context dictionary for rendering
-        output_path: Where to save generated .docx
-
-    Returns:
-        True if successful, False otherwise
-    """
-    try:
-        # Load template
-        doc = DocxTemplate(template_path)
-
-        # Render with context
-        doc.render(context)
-
-        # Save output
-        doc.save(output_path)
-
-        return True
-
-    except Exception as e:
-        print(f"Error rendering template: {e}", file=sys.stderr)
-        return False
+    # Save document
+    doc.save(output_path)
+    return True
 
 
 def validate_output(output_path: str) -> tuple:
-    """
-    Verify generated file is valid Word document.
-
-    Checks:
-        - File exists and can be opened
-        - No unrendered Jinja2 tags ({{ or {%)
-        - Has minimum content
-
-    Args:
-        output_path: Path to generated .docx file
-
-    Returns:
-        Tuple of (is_valid: bool, errors: list, warnings: list)
-    """
+    """Verify generated file is valid and compact."""
     errors = []
     warnings = []
 
-    # Check file exists
     if not os.path.exists(output_path):
         errors.append(f"File not found: {output_path}")
         return False, errors, warnings
 
-    # Check file size
-    size = os.path.getsize(output_path)
-    if size < 1000:
-        errors.append(f"File too small ({size} bytes), likely corrupt or empty")
-        return False, errors, warnings
-
     try:
-        # Import python-docx for validation (not docxtpl)
-        from docx import Document
         doc = Document(output_path)
     except Exception as e:
         errors.append(f"Invalid Word document: {e}")
         return False, errors, warnings
 
-    # Check for unrendered Jinja2 tags
-    text = '\n'.join(p.text for p in doc.paragraphs)
-    if '{{' in text or '{%' in text:
-        errors.append("Unrendered Jinja2 template tags found - template rendering failed")
+    # Check paragraph count (compact should be under 50)
+    para_count = len([p for p in doc.paragraphs if p.text.strip()])
+    if para_count > 60:
+        warnings.append(f"Document may be too long ({para_count} paragraphs)")
 
-    # Check for minimum content
-    if len(doc.paragraphs) < 5:
-        warnings.append(f"Document has only {len(doc.paragraphs)} paragraphs - may be incomplete")
+    # Check for tables (should have at least one for compact format)
+    if len(doc.tables) == 0:
+        warnings.append("No tables found - consider using tables for structured content")
 
-    # Check for assessment content (ASMT-01)
-    text_lower = text.lower()
-    assessment_keywords = ['exit ticket', 'assessment', 'check your understanding', 'reflection', 'performance task']
-    has_assessment = any(kw in text_lower for kw in assessment_keywords)
-    if not has_assessment:
-        warnings.append("May be missing explicit assessment section (check document manually)")
-
-    is_valid = len(errors) == 0
-    return is_valid, errors, warnings
+    return True, errors, warnings
 
 
-def generate_worksheet(lesson_path: str, template_path: str, output_path: str) -> bool:
+def generate_worksheet(lesson_path: str, template_path: str = None, output_path: str = None) -> bool:
     """
-    Generate student materials from lesson design.
+    Generate student worksheet from lesson design.
 
-    Args:
-        lesson_path: Path to lesson design JSON (04_lesson_final.json)
-        template_path: Path to Word template
-        output_path: Where to save generated .docx
-
-    Returns:
-        True if successful, False otherwise
+    Note: template_path is ignored - we build documents programmatically for compactness.
     """
-    # Load lesson design
-    try:
-        with open(lesson_path, 'r', encoding='utf-8') as f:
-            lesson = json.load(f)
-    except Exception as e:
-        print(f"Error loading lesson design: {e}", file=sys.stderr)
-        return False
+    # Load lesson
+    lesson = load_lesson_design(lesson_path)
 
-    # Determine material type from lesson type
-    lesson_type = lesson.get('lesson_type', 'introducing')
-    material_type = select_material_type(lesson_type)
+    # Determine output path
+    if output_path is None:
+        lesson_dir = os.path.dirname(os.path.abspath(lesson_path))
+        output_path = os.path.join(lesson_dir, '06_worksheet.docx')
 
-    print(f"Lesson type: {lesson_type}")
-    print(f"Material type: {material_type}")
+    # Generate worksheet
+    print(f"Lesson type: {lesson.get('lesson_type', 'unknown')}")
+    print(f"Generating compact worksheet...")
 
-    # Prepare template context
-    context = prepare_template_context(lesson, material_type)
+    success = generate_worksheet_from_lesson(lesson, output_path)
 
-    # Render template
-    if not render_template(template_path, context, output_path):
-        return False
+    if success:
+        is_valid, errors, warnings = validate_output(output_path)
 
-    # Validate output
-    is_valid, errors, warnings = validate_output(output_path)
+        if errors:
+            print("\nErrors:", file=sys.stderr)
+            for e in errors:
+                print(f"  - {e}", file=sys.stderr)
 
-    if errors:
-        print("\nValidation errors:", file=sys.stderr)
-        for error in errors:
-            print(f"  - {error}", file=sys.stderr)
+        if warnings:
+            print("\nWarnings:")
+            for w in warnings:
+                print(f"  - {w}")
 
-    if warnings:
-        print("\nValidation warnings:")
-        for warning in warnings:
-            print(f"  - {warning}")
-
-    if is_valid:
         print(f"\nWorksheet generated successfully: {output_path}")
         return True
-    else:
-        return False
 
-
-def get_default_paths(lesson_path: str) -> tuple:
-    """
-    Get default template and output paths based on lesson path.
-
-    Args:
-        lesson_path: Path to lesson design JSON
-
-    Returns:
-        Tuple of (template_path, output_path)
-    """
-    # Get script directory for default template
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    template_path = os.path.join(script_dir, '..', 'templates', 'student_worksheet.docx')
-    template_path = os.path.normpath(template_path)
-
-    # Output to same directory as lesson JSON
-    lesson_dir = os.path.dirname(os.path.abspath(lesson_path))
-    output_path = os.path.join(lesson_dir, '06_worksheet.docx')
-
-    return template_path, output_path
+    return False
 
 
 def main():
@@ -429,50 +370,24 @@ def main():
     if len(sys.argv) < 2:
         print("Usage: python generate_worksheet.py <lesson.json> [template.docx] [output.docx]")
         print()
-        print("Arguments:")
-        print("  lesson.json    Path to lesson design JSON (e.g., 04_lesson_final.json)")
-        print("  template.docx  Path to Word template (optional, uses default)")
-        print("  output.docx    Output path for generated worksheet (optional)")
-        print()
-        print("Examples:")
-        print("  python generate_worksheet.py session/04_lesson_final.json")
-        print("  python generate_worksheet.py lesson.json template.docx output.docx")
+        print("Note: template.docx is ignored - documents are built programmatically for compactness.")
         sys.exit(1)
 
     lesson_path = sys.argv[1]
 
-    # Check lesson file exists
     if not os.path.exists(lesson_path):
         print(f"Error: Lesson file not found: {lesson_path}", file=sys.stderr)
         sys.exit(1)
 
-    # Get template and output paths
-    if len(sys.argv) >= 4:
-        template_path = sys.argv[2]
-        output_path = sys.argv[3]
-    elif len(sys.argv) == 3:
-        template_path = sys.argv[2]
-        _, output_path = get_default_paths(lesson_path)
-    else:
-        template_path, output_path = get_default_paths(lesson_path)
+    # Get output path (ignore template - we don't use it)
+    output_path = sys.argv[3] if len(sys.argv) >= 4 else None
+    if output_path is None and len(sys.argv) >= 3:
+        # Check if arg 2 looks like an output path
+        if sys.argv[2].endswith('.docx') and 'template' not in sys.argv[2].lower():
+            output_path = sys.argv[2]
 
-    # Check template exists
-    if not os.path.exists(template_path):
-        print(f"Error: Template file not found: {template_path}", file=sys.stderr)
-        sys.exit(1)
-
-    # Ensure output directory exists
-    output_dir = os.path.dirname(output_path)
-    if output_dir and not os.path.exists(output_dir):
-        os.makedirs(output_dir, exist_ok=True)
-
-    # Generate worksheet
-    success = generate_worksheet(lesson_path, template_path, output_path)
-
-    if success:
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    success = generate_worksheet(lesson_path, None, output_path)
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

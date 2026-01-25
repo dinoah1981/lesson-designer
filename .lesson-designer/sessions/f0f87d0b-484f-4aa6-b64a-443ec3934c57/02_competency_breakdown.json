@@ -1,0 +1,25 @@
+{
+  "skill": {
+    "verb": "analyze",
+    "object": "primary sources",
+    "full_statement": "Analyze primary sources to evaluate historical claims"
+  },
+  "required_knowledge": [
+    {
+      "id": "K1",
+      "item": "What primary sources are (definition, types)",
+      "classification": "needs_teaching"
+    },
+    {
+      "id": "K2",
+      "item": "How to identify bias in sources",
+      "classification": "needs_teaching"
+    },
+    {
+      "id": "K3",
+      "item": "What constitutes evidence vs opinion",
+      "classification": "already_assumed"
+    }
+  ],
+  "target_proficiency": "proficient"
+}

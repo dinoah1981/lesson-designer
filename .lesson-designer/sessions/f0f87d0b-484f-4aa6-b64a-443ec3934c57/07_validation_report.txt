@@ -1,0 +1,28 @@
+============================================================
+LESSON DESIGNER OUTPUT VALIDATION REPORT
+============================================================
+
+RESULT: PASSED WITH WARNINGS
+  1 warning(s)
+
+------------------------------------------------------------
+FILE STATUS
+------------------------------------------------------------
+  05_slides.pptx: VALID
+  06_worksheet.docx: VALID
+
+------------------------------------------------------------
+WARNINGS (review before using materials)
+------------------------------------------------------------
+  [WARNING] [Word] Document has only 8 non-empty paragraphs - may be incomplete
+
+------------------------------------------------------------
+REQUIREMENTS CHECKLIST
+------------------------------------------------------------
+  [PASS] SLID-02: Hidden lesson plan slide
+  [PASS] SLID-04: 16pt minimum font size
+  [PASS] MATL-01: Generated .docx file
+  [PASS] ASMT-01: Formative assessment included
+  [PASS] TMPL-01: Template rendered correctly
+
+============================================================
