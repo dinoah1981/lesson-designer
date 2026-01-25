@@ -53,6 +53,9 @@ Recent decisions affecting current work:
 - **Lesson type distributions (01-03):** Each lesson type has recommended Marzano level distribution (e.g., novel_application: 50% knowledge_utilization)
 - **Validation exit codes (01-03):** Exit 0=pass, 1=warnings, 2=fail/block - controls workflow progression
 - **Maximum 3 validation attempts (01-03):** After 3 failures, escalate to teacher for guidance
+- **Sparse slide format (01-04):** Max 5 bullets per slide, max 15 words per bullet for teacher-led instruction
+- **Font size standards (01-04):** 40pt titles, 20pt body (exceeds 16pt minimum per SLID-04)
+- **Presenter notes structure (01-04):** SAY/ASK/DEMO/WATCH FOR sections for teacher guidance
 - **Material type mapping (01-05):** Direct lesson-to-material mapping (introducing->worksheet, practicing->problem_set, etc.)
 - **Assessment integration (01-05):** Every document includes assessment (exit_ticket, embedded, or performance) per ASMT-01
 
