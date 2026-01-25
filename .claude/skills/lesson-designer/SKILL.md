@@ -211,42 +211,238 @@ and knowledge students need...
 
 ### Stage 3: Design Lesson with Marzano Taxonomy
 
-**Purpose:** Create complete lesson plan with activities mapped to Marzano levels.
+**Purpose:** Create complete lesson plan with activities mapped to Marzano levels, ensuring cognitive rigor across the lesson.
 
-**Inputs:** Skills and knowledge from Stage 2, MARZANO.md framework
+**Inputs:**
+- Competency breakdown from Stage 2 (`02_competency_breakdown.json`)
+- [MARZANO.md](./MARZANO.md) framework reference
 
 **Process:**
-1. Design opening/hook activity
-2. Create main instructional activities
-3. Design practice activities
-4. Create closing/assessment activity
-5. Map each activity to Marzano cognitive level
-6. Assign duration and materials
-7. Structure as JSON following schema
 
-**Outputs:** Complete lesson.json with activities
+#### Step 1: Load Competency Breakdown
 
-**Next:** Stage 3b
+Read the skills and knowledge from `02_competency_breakdown.json` saved in Stage 2.
+
+#### Step 2: Determine Lesson Type
+
+Based on teacher input and context, identify which lesson type applies:
+
+| Lesson Type | When to Use | Cognitive Focus |
+|-------------|-------------|-----------------|
+| **Introducing new knowledge/skills** | First lesson on a topic | More retrieval + comprehension |
+| **Practicing skills** | Reinforcing introduced content | Balance of all levels |
+| **Applying knowledge** | Using knowledge in structured problems | Heavy analysis + application |
+| **Synthesizing** | Combining multiple concepts | Analysis + knowledge utilization |
+| **Novel application** | Applying to new/unfamiliar contexts | Mostly knowledge utilization |
+
+**Confirmation prompt:** "Based on what you've told me, this seems like an [introducing/practicing/etc.] lesson. Is that right?"
+
+#### Step 3: Design Activities Following Marzano Progression
+
+See [MARZANO.md](./MARZANO.md) for detailed guidance on each cognitive level.
+
+**For "Introducing new knowledge" lessons:**
+- Opening retrieval (5-10 min): Connect to prior knowledge
+- Comprehension (15-20 min): Direct instruction with checks for understanding
+- Analysis (10-15 min): Students examine/compare/contrast new content
+- Application (10-15 min): Initial practice with scaffolding
+- Assessment (5 min): Exit ticket or embedded check
+
+**For "Practicing skills" lessons:**
+- Retrieval (5 min): Quick review of key concepts/procedures
+- Comprehension (10 min): Explain steps and reasoning
+- Analysis (15-20 min): Error analysis and pattern recognition
+- Knowledge utilization (10-15 min): Apply to varied contexts
+- Assessment (5 min): Demonstration or exit ticket
+
+**For "Applying knowledge" lessons:**
+- Retrieval (5 min): Quick review of key concepts
+- Comprehension check (5 min): Verify readiness
+- Analysis (15-20 min): Structured problem-solving
+- Knowledge utilization (20-25 min): Open-ended application
+- Assessment (5 min): Reflection or exit ticket
+
+**For "Synthesizing" lessons:**
+- Retrieval (5 min): Activate prior knowledge from multiple topics
+- Comprehension (10 min): Connect ideas across concepts
+- Analysis (15-20 min): Examine relationships across concepts
+- Knowledge utilization (15-20 min): Create something integrating multiple concepts
+- Assessment (5 min): Synthesis demonstration
+
+**For "Novel application" lessons:**
+- Retrieval (5 min): Minimal fact recall
+- Comprehension (5-10 min): Understand problem context
+- Analysis (15-20 min): Break down complex/unfamiliar problem
+- Knowledge utilization (25-30 min): Innovative problem solving
+- Assessment (5 min): Process reflection
+
+#### Step 4: Specify Each Activity
+
+For each activity in the lesson, include:
+
+| Field | Description | Required |
+|-------|-------------|----------|
+| `name` | Action-oriented activity name | Yes |
+| `duration` | Time in minutes | Yes |
+| `marzano_level` | One of: `retrieval`, `comprehension`, `analysis`, `knowledge_utilization` | Yes |
+| `instructions` | Numbered steps for students | Yes |
+| `materials` | List of required materials/resources | Yes |
+| `student_output` | What students produce (tangible work product) | Yes |
+| `assessment_method` | How teacher knows it worked | Yes |
+| `differentiation` | Support/extension options | Recommended |
+
+#### Step 5: Include Hidden First Slide Content
+
+Design content for the teacher-only hidden first slide:
+
+- **Objective:** Single clear statement of what students will be able to do
+- **Agenda:** Activity list with timing
+- **Anticipated misconceptions:** 2-3 common student errors to watch for
+- **Delivery tips:** 2-3 instructional suggestions
+
+#### Step 6: Save Lesson Design
+
+Save to `.lesson-designer/sessions/{session_id}/03_lesson_design_v1.json`:
+
+```json
+{
+  "title": "string",
+  "grade_level": "string",
+  "duration": "integer (minutes)",
+  "lesson_type": "introducing|practicing|applying|synthesizing|novel_application",
+  "objective": "string (single clear statement)",
+  "activities": [
+    {
+      "name": "string",
+      "duration": "integer",
+      "marzano_level": "retrieval|comprehension|analysis|knowledge_utilization",
+      "instructions": ["string"],
+      "materials": ["string"],
+      "student_output": "string",
+      "assessment_method": "string",
+      "differentiation": {
+        "support": ["string"],
+        "extension": ["string"]
+      }
+    }
+  ],
+  "hidden_slide_content": {
+    "objective": "string",
+    "agenda": [{"activity": "string", "duration": "integer"}],
+    "misconceptions": ["string"],
+    "delivery_tips": ["string"]
+  },
+  "vocabulary": [{"word": "string", "definition": "string"}],
+  "assessment": {
+    "type": "exit_ticket|embedded|performance",
+    "description": "string",
+    "questions": ["string"]
+  }
+}
+```
+
+**Outputs:** `03_lesson_design_v1.json` with complete lesson structure
+
+**Requirements Covered:**
+- MARZ-01: Lessons structured according to Marzano taxonomy (retrieval through knowledge utilization)
+- MARZ-02: Tasks aligned to lesson type (introducing, practicing, applying, synthesizing, novel application)
+
+**Next:** Stage 3b (Validate cognitive rigor)
 
 ---
 
 ### Stage 3b: Validate Cognitive Rigor
 
-**Purpose:** Ensure lesson meets minimum higher-order thinking thresholds.
+**Purpose:** Ensure lesson meets minimum higher-order thinking thresholds before proceeding.
 
-**Inputs:** lesson.json from Stage 3
+**Inputs:** `03_lesson_design_v1.json` from Stage 3
 
 **Process:**
-1. Calculate percentage of time at each Marzano level
-2. Check against thresholds:
-   - Minimum 40% higher-order (analysis + knowledge utilization)
-   - Maximum 30% retrieval-only
-3. If validation fails, return to Stage 3 with specific adjustments
-4. If validation passes, proceed
 
-**Outputs:** Validation report
+#### Step 1: Run Validation Script
 
-**Next:** Stage 4 (if passed) or Stage 3 (if failed)
+After saving lesson design, IMMEDIATELY run validation:
+
+```bash
+python .claude/skills/lesson-designer/scripts/validate_marzano.py .lesson-designer/sessions/{session_id}/03_lesson_design_v1.json
+```
+
+#### Step 2: Interpret Results
+
+**Exit code 0 (PASSED):**
+- Proceed to Stage 4
+- Save final validated design as `04_lesson_final.json`
+
+**Exit code 1 (PASSED WITH WARNINGS):**
+- Review warnings and consider addressing them
+- Can proceed if warnings are acceptable
+- Inform teacher of any warnings
+
+**Exit code 2 (FAILED - BLOCKS PROGRESSION):**
+- Review the error messages
+- The most common issue is insufficient higher-order thinking
+
+#### Step 3: Address Validation Failures
+
+If validation fails, return to Stage 3 and:
+
+1. **Convert retrieval activities to comprehension:**
+   - Change "List the steps" to "Explain why each step is needed"
+   - Change "Define vocabulary" to "Create analogies for concepts"
+
+2. **Convert comprehension activities to analysis:**
+   - Change "Summarize the content" to "Compare and contrast with..."
+   - Change "Explain the process" to "Analyze what would happen if..."
+
+3. **Add knowledge utilization activities:**
+   - Design challenges: "Create a solution for..."
+   - Investigation tasks: "Investigate and propose..."
+   - Real-world application: "Apply this concept to solve..."
+
+4. **Regenerate lesson design** as `03_lesson_design_v2.json`
+
+5. **Re-run validation**
+
+#### Step 4: Maximum Attempts
+
+**Maximum 3 validation attempts.** If still failing after 3 tries:
+- Present the issues to the teacher for guidance
+- Ask which cognitive trade-offs are acceptable
+- Proceed with teacher's explicit approval
+
+#### Example Validation Workflow
+
+```
+[Claude runs validation]
+
+VALIDATION REPORT
+=================
+
+Cognitive Distribution:
+  Retrieval: 20.0%
+  Comprehension: 25.0%
+  Analysis: 30.0%
+  Knowledge Utilization: 25.0%
+
+Higher-Order Thinking: 55.0% (minimum 40%) - PASS
+
+Errors:
+  (none)
+
+Warnings:
+  - Activity 4 drops 2 cognitive levels from Activity 3
+
+RESULT: PASSED WITH WARNINGS
+
+[Claude proceeds to Stage 4, noting warning for teacher]
+```
+
+**Outputs:** Validation report and final lesson design (`04_lesson_final.json`)
+
+**Requirements Covered:**
+- MARZ-03: Cognitive rigor enforced with minimum 40% higher-order thinking
+
+**Next:** Stage 4 (if passed) or Stage 3 (if failed, up to 3 attempts)
 
 ---
 
