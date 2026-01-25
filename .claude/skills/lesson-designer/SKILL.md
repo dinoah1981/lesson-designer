@@ -710,24 +710,111 @@ RESULT: PASSED WITH WARNINGS
 
 ### Stage 5: Generate Materials (.pptx + .docx)
 
-**Purpose:** Create classroom-ready files from lesson plan.
+**Purpose:** Create classroom-ready files from validated lesson plan.
 
-**Inputs:** Validated lesson design from Stage 3b (`04_lesson_final.json`)
+**Inputs:** `04_lesson_final.json` from Stage 3b
 
 **Process:**
 
-#### Part 1: Generate PowerPoint Slides (Plan 04)
+#### Part 1: Generate PowerPoint Slide Deck
 
-Generate teacher slide deck with hidden lesson plan and sparse content:
+1. **Load the validated lesson design:**
 
-```bash
-python .claude/skills/lesson-designer/scripts/generate_slides.py \
-  .lesson-designer/sessions/{session_id}/04_lesson_final.json \
-  .claude/skills/lesson-designer/templates/slide_deck.pptx \
-  .lesson-designer/sessions/{session_id}/05_slides.pptx
-```
+   ```python
+   import json
+   session_path = f".lesson-designer/sessions/{session_id}"
+   with open(f"{session_path}/04_lesson_final.json", 'r') as f:
+       lesson = json.load(f)
+   ```
 
-*(See Plan 04 for slide generation details)*
+2. **Generate the slide deck:**
+
+   ```bash
+   python .claude/skills/lesson-designer/scripts/generate_slides.py \
+     .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+     .claude/skills/lesson-designer/templates/slide_deck.pptx \
+     .lesson-designer/sessions/{session_id}/05_slides.pptx
+   ```
+
+3. **What the script creates:**
+
+   | Slide | Content | Visibility |
+   |-------|---------|------------|
+   | **Slide 1** | Lesson plan (objective, agenda, misconceptions, tips) | **Hidden** - Teacher reference only |
+   | **Slide 2** | Title slide with lesson title, grade, duration | Visible |
+   | **Slide 3** | Learning objectives as bullet points | Visible |
+   | **Slides 4+** | One slide per activity (sparse format) | Visible |
+   | **Final** | Assessment/exit ticket | Visible |
+
+4. **Sparse Format Philosophy:**
+
+   ```
+   IMPORTANT: Slides are designed for teacher-led instruction, not self-study.
+
+   Each slide contains:
+   - 3-5 talking points (not full paragraphs)
+   - Maximum 15 words per point
+   - Visual prompts where appropriate
+
+   The full content is in presenter notes, which include:
+   - What to SAY (introduce concepts, explain)
+   - What to ASK (check understanding, prompt discussion)
+   - What to DEMO (show examples, model procedures)
+   - What to WATCH FOR (common mistakes, misconceptions)
+
+   Teachers should never read slides to students. Slides are conversation scaffolding.
+   ```
+
+   **Example Content Transformation:**
+
+   ```
+   BAD (dense self-study format):
+   "Photosynthesis is the process by which green plants and some other
+   organisms use sunlight to synthesize foods from carbon dioxide and water.
+   The process occurs primarily in chloroplasts and produces oxygen as a byproduct.
+   This chemical reaction can be represented by the equation: 6CO2 + 6H2O -> C6H12O6 + 6O2."
+
+   GOOD (sparse teacher-led format):
+   - Light + CO2 + H2O -> Glucose + O2
+   - Occurs in chloroplasts
+   - Plants make their own food
+   - Oxygen released as byproduct
+
+   Presenter notes:
+   SAY: "Today we're exploring how plants make their own food - photosynthesis."
+   ASK: "What do plants need to survive? Where do they get their energy?"
+   DEMO: Point to diagram showing chloroplast structure.
+   WATCH FOR: Students may think plants "eat" soil - clarify they make food from light.
+   ```
+
+5. **Font Size Requirements:**
+
+   | Element | Size | Requirement |
+   |---------|------|-------------|
+   | Title text | 36-40pt | Above 16pt minimum |
+   | Body text | 20pt | Above 16pt minimum |
+   | Presenter notes | 12pt | Not visible during presentation |
+
+6. **If slide generation fails:**
+
+   - Check that lesson design JSON is valid (`04_lesson_final.json`)
+   - Check that template file exists at `templates/slide_deck.pptx`
+   - Review error message for specific issue
+   - Most common issues:
+     - Missing required fields in lesson design (title, activities)
+     - Template file not found or corrupted
+     - Invalid activity structure (missing duration or marzano_level)
+
+   ```bash
+   # Verify lesson JSON is valid
+   python -c "import json; json.load(open('.lesson-designer/sessions/{session_id}/04_lesson_final.json'))"
+   ```
+
+**Requirements Covered (Part 1):**
+- SLID-01: Tool generates actual .pptx files
+- SLID-02: Hidden first slide with lesson plan
+- SLID-03: Sparse, teacher-led format (talking points, not paragraphs)
+- SLID-04: 16pt font minimum (uses 20pt for body, 36pt+ for titles)
 
 #### Part 2: Generate Student Materials (Word Document)
 
@@ -858,10 +945,6 @@ Exit code 2: FAILED - Review errors, regenerate materials
 - Validation pass/fail status
 
 **Next:** Stage 7 (if passed) or Stage 5 (if failed)
-
----
-
-### Stage 7: Present to Teacher
 
 ---
 
