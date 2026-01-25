@@ -32,6 +32,22 @@ ICONS = {
     'knowledge_utilization': '💡'
 }
 
+# Default discussion timing structure (in minutes)
+DISCUSSION_STRUCTURE = {
+    'opening': 2,      # Hook question, activate prior knowledge
+    'pair_work': 5,    # Partner discussion
+    'group_share': 5,  # Whole class sharing
+    'closing': 3       # Synthesis, exit question
+}
+
+
+def is_discussion_activity(activity: dict) -> bool:
+    """Detect if activity is a discussion based on name or type."""
+    name_lower = activity.get('name', '').lower()
+    discussion_keywords = ['discussion', 'debate', 'seminar', 'share',
+                           'pair', 'group talk', 'debrief', 'reflection']
+    return any(kw in name_lower for kw in discussion_keywords)
+
 
 def add_header_bar(prs, slide, title_text, subtitle_text=None, timer_text=None):
     """Add professional header bar with title."""
@@ -273,6 +289,100 @@ def create_agenda_slide(prs, slide, lesson):
         y_pos += 1.0
 
 
+def create_discussion_slide(prs, slide, activity):
+    """Create structured discussion slide with timing breakdown."""
+    duration = activity.get('duration', 15)
+
+    # Header with total time
+    add_header_bar(prs, slide,
+        f"💬 {activity['name']}",
+        subtitle_text="Discussion Activity",
+        timer_text=f"⏱️ {duration}m")
+
+    add_light_background(prs, slide)
+
+    # Calculate timing breakdown
+    opening_time = min(2, duration // 6)
+    closing_time = min(3, duration // 5)
+    main_time = duration - opening_time - closing_time
+    pair_time = main_time // 2
+    share_time = main_time - pair_time
+
+    # Content sections with timing
+    y_pos = 1.9
+
+    # Opening section
+    add_content_box(prs, slide, Inches(0.5), Inches(y_pos), Inches(12.333), Inches(1.2))
+    opening_box = slide.shapes.add_textbox(Inches(0.7), Inches(y_pos + 0.1), Inches(11.9), Inches(1))
+    tf = opening_box.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = f"🎯 Opening ({opening_time} min)"
+    run.font.bold = True
+    run.font.size = Pt(18)
+    run.font.color.rgb = HEADER_BLUE
+
+    # Get opening from activity or generate default
+    opening = activity.get('discussion_structure', {}).get('opening',
+        activity.get('instructions', [''])[0] if activity.get('instructions') else 'Opening question...')
+    p2 = tf.add_paragraph()
+    run2 = p2.add_run()
+    run2.text = opening[:100] if len(str(opening)) > 100 else str(opening)
+    run2.font.size = Pt(16)
+
+    y_pos += 1.4
+
+    # Main discussion section
+    add_content_box(prs, slide, Inches(0.5), Inches(y_pos), Inches(12.333), Inches(2.5))
+    main_box = slide.shapes.add_textbox(Inches(0.7), Inches(y_pos + 0.1), Inches(11.9), Inches(2.3))
+    tf = main_box.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = f"💭 Discussion ({main_time} min: Pair {pair_time}m | Share {share_time}m)"
+    run.font.bold = True
+    run.font.size = Pt(18)
+    run.font.color.rgb = HEADER_BLUE
+
+    # Discussion prompts
+    prompts = activity.get('discussion_structure', {}).get('prompts',
+        activity.get('instructions', ['Discuss the main concepts...']))
+    for prompt in prompts[:3]:
+        p = tf.add_paragraph()
+        run = p.add_run()
+        run.text = f"• {prompt[:80]}"
+        run.font.size = Pt(16)
+
+    y_pos += 2.7
+
+    # Closing section
+    add_content_box(prs, slide, Inches(0.5), Inches(y_pos), Inches(12.333), Inches(1.1))
+    closing_box = slide.shapes.add_textbox(Inches(0.7), Inches(y_pos + 0.1), Inches(11.9), Inches(0.9))
+    tf = closing_box.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = f"✅ Closing ({closing_time} min)"
+    run.font.bold = True
+    run.font.size = Pt(18)
+    run.font.color.rgb = HEADER_BLUE
+
+    closing = activity.get('discussion_structure', {}).get('closing', 'Synthesize key takeaways')
+    p2 = tf.add_paragraph()
+    run2 = p2.add_run()
+    run2.text = closing[:100] if len(str(closing)) > 100 else str(closing)
+    run2.font.size = Pt(16)
+
+    # Add facilitation notes (next task will enhance these)
+    notes_slide = slide.notes_slide
+    notes_tf = notes_slide.notes_text_frame
+    notes_tf.text = f"DISCUSSION: {activity['name']}\n"
+    notes_tf.text += f"Total time: {duration} minutes\n\n"
+    notes_tf.text += f"TIME BREAKDOWN:\n"
+    notes_tf.text += f"  • Opening: {opening_time} min\n"
+    notes_tf.text += f"  • Pair work: {pair_time} min\n"
+    notes_tf.text += f"  • Group share: {share_time} min\n"
+    notes_tf.text += f"  • Closing: {closing_time} min\n"
+
+
 def create_activity_slide(prs, slide, activity):
     """Create slide for individual activity."""
     icon = ICONS.get(activity['marzano_level'], '📌')
@@ -408,7 +518,10 @@ def generate_slides(lesson_path: str, output_path: str) -> bool:
     # Activity slides
     for activity in lesson['activities']:
         slide = prs.slides.add_slide(prs.slide_layouts[6])
-        create_activity_slide(prs, slide, activity)
+        if is_discussion_activity(activity):
+            create_discussion_slide(prs, slide, activity)
+        else:
+            create_activity_slide(prs, slide, activity)
 
     # Vocabulary slide (if vocabulary exists)
     vocab = lesson.get('vocabulary', [])
