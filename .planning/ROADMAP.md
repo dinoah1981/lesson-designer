@@ -35,12 +35,15 @@ Decimal phases appear between their surrounding integers in numeric order.
   5. Each lesson includes formative assessment embedded in student work or as exit ticket
   6. All materials align to Marzano taxonomy with enforced cognitive rigor (not just recall)
 
-**Plans**: TBD
+**Plans**: 6 plans
 
 Plans:
-- [ ] 01-01: TBD during phase planning
-- [ ] 01-02: TBD during phase planning
-- [ ] 01-03: TBD during phase planning
+- [ ] 01-01-PLAN.md — Skill structure, Marzano framework, and templates
+- [ ] 01-02-PLAN.md — Teacher input and competency decomposition
+- [ ] 01-03-PLAN.md — Marzano-based lesson design and validation
+- [ ] 01-04-PLAN.md — PowerPoint generation with sparse format
+- [ ] 01-05-PLAN.md — Word document generation with assessment
+- [ ] 01-06-PLAN.md — Integration and verification checkpoint
 
 ### Phase 2: Material Quality & Formatting
 **Goal**: Materials are physically usable and pedagogically complete with proper formatting, discussion structure, and diverse assessment types.
@@ -130,7 +133,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Lesson Generation | 0/TBD | Not started | - |
+| 1. Core Lesson Generation | 0/6 | Planned | - |
 | 2. Material Quality & Formatting | 0/TBD | Not started | - |
 | 3. Single Persona Feedback | 0/TBD | Not started | - |
 | 4. Multi-Persona Validation | 0/TBD | Not started | - |
@@ -138,4 +141,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 ---
 *Roadmap created: 2025-01-25*
-*Last updated: 2025-01-25*
+*Last updated: 2026-01-25 — Phase 1 planned (6 plans in 4 waves)*
