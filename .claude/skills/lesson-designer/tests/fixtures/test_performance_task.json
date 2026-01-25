@@ -1,0 +1,40 @@
+{
+  "title": "Historical Analysis Essay",
+  "type": "performance",
+  "description": "Write a 3-paragraph essay analyzing the causes of the American Revolution. Use at least two primary sources as evidence.",
+  "requirements": [
+    "Introduction with clear thesis statement",
+    "Body paragraph with evidence from primary sources",
+    "Conclusion that synthesizes your argument",
+    "Proper citation of sources"
+  ],
+  "criteria": [
+    {
+      "name": "Thesis & Argument",
+      "descriptors": [
+        "Clear, specific thesis with sophisticated argument",
+        "Clear thesis with logical argument",
+        "Thesis present but vague or argument unclear",
+        "No clear thesis or argument"
+      ]
+    },
+    {
+      "name": "Use of Evidence",
+      "descriptors": [
+        "3+ sources expertly integrated and analyzed",
+        "2+ sources cited with clear connections to argument",
+        "1 source cited with limited analysis",
+        "No sources or irrelevant sources"
+      ]
+    },
+    {
+      "name": "Organization",
+      "descriptors": [
+        "Seamless flow with effective transitions",
+        "Clear organization with adequate transitions",
+        "Some organization but transitions weak",
+        "No clear organization"
+      ]
+    }
+  ]
+}

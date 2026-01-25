@@ -1,0 +1,48 @@
+{
+  "title": "Unit 2 Comprehensive Test",
+  "type": "test",
+  "instructions": "Read each question carefully. Show all work. You have 50 minutes.",
+  "multiple_choice": [
+    {
+      "question": "Which of the following best describes a democracy?",
+      "choices": [
+        "Rule by one person",
+        "Rule by the people",
+        "Rule by religious leaders",
+        "Rule by the wealthy"
+      ],
+      "answer": "B",
+      "points": 2
+    }
+  ],
+  "short_answer": [
+    {
+      "question": "Explain the difference between direct and representative democracy.",
+      "points": 5,
+      "lines": 4,
+      "key_points": [
+        "Direct democracy: citizens vote on all decisions",
+        "Representative democracy: citizens elect representatives",
+        "Example differences in scale and practicality"
+      ]
+    }
+  ],
+  "essay": [
+    {
+      "question": "Evaluate whether the United States is more democratic today than it was in 1789. Support your argument with specific evidence.",
+      "points": 20,
+      "criteria": [
+        "Clear thesis statement",
+        "Evidence from multiple time periods",
+        "Analysis of constitutional amendments",
+        "Conclusion that synthesizes argument"
+      ],
+      "key_points": [
+        "Voting rights expansion (15th, 19th, 26th amendments)",
+        "Direct election of Senators (17th amendment)",
+        "Civil Rights Movement impact",
+        "Ongoing debates about electoral college, gerrymandering"
+      ]
+    }
+  ]
+}
