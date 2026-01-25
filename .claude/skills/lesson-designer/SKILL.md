@@ -193,19 +193,130 @@ and knowledge students need...
 
 ### Stage 2: Decompose into Skills and Knowledge
 
-**Purpose:** Break down competency into teachable components.
+**Purpose:** Break down the competency into teachable components - the skill students will demonstrate and the knowledge required to perform it.
 
-**Inputs:** Competency requirements from Stage 1
+**Inputs:** Competency requirements from Stage 1 (`01_input.json`)
 
 **Process:**
-1. Identify specific skills (procedural knowledge)
-2. Identify specific knowledge (declarative knowledge)
-3. Sequence learning elements
-4. Identify potential misconceptions
 
-**Outputs:** Skills and knowledge breakdown
+1. **Load input from Stage 1:**
 
-**Next:** Stage 3
+   ```python
+   import sys
+   sys.path.insert(0, '.claude/skills/lesson-designer/scripts')
+   from parse_competency import load_input, save_breakdown
+
+   input_data = load_input(session_id)
+   competency = input_data['competency']
+   ```
+
+2. **Decompose the competency into skill + knowledge:**
+
+   Every competency has two parts:
+   - **The Skill** - What students will DO (verb + object)
+   - **Required Knowledge** - What students need to KNOW to perform the skill
+
+   **Decomposition process:**
+
+   a. Identify the main verb (the skill action): analyze, evaluate, construct, compare, apply, etc.
+
+   b. Identify the object (what the verb acts on): primary sources, arguments, equations, etc.
+
+   c. List all factual knowledge required to perform the skill successfully
+
+   **Example decomposition:**
+
+   ```
+   Competency: "Students will analyze primary sources to evaluate historical claims"
+
+   Skill:
+   - Verb: evaluate
+   - Object: historical claims
+   - Full statement: "Evaluate historical claims using primary source evidence"
+
+   Required Knowledge:
+   K1: What primary sources are (definition, types)
+   K2: How to identify bias in sources
+   K3: What constitutes evidence vs. opinion
+   K4: Historical context of the period being studied
+   K5: How to cite sources properly
+   ```
+
+3. **Present decomposition to teacher for review:**
+
+   ```
+   I've broken down the competency like this:
+
+   **The Skill:**
+   Evaluate historical claims using primary source evidence
+
+   **Required Knowledge (what students need to know):**
+   1. What primary sources are (definition, types)
+   2. How to identify bias in sources
+   3. What constitutes evidence vs. opinion
+   4. Historical context of the period being studied
+   5. How to cite sources properly
+
+   Does this look right? Would you add or remove anything?
+   ```
+
+   Wait for teacher confirmation or adjustments before proceeding.
+
+4. **Save decomposition to `02_competency_breakdown.json`:**
+
+   ```python
+   breakdown_data = {
+       "skill": {
+           "verb": "evaluate",
+           "object": "historical claims",
+           "full_statement": "Evaluate historical claims using primary source evidence"
+       },
+       "required_knowledge": [
+           {"id": "K1", "item": "What primary sources are (definition, types)", "classification": None},
+           {"id": "K2", "item": "How to identify bias in sources", "classification": None},
+           {"id": "K3", "item": "What constitutes evidence vs. opinion", "classification": None},
+           {"id": "K4", "item": "Historical context of the period being studied", "classification": None},
+           {"id": "K5", "item": "How to cite sources properly", "classification": None}
+       ]
+   }
+   save_breakdown(session_id, breakdown_data)
+   ```
+
+**Breakdown JSON Schema (`02_competency_breakdown.json`):**
+
+```json
+{
+  "skill": {
+    "verb": "string (action verb - analyze, evaluate, construct, etc.)",
+    "object": "string (what the verb acts on)",
+    "full_statement": "string (complete skill statement)"
+  },
+  "required_knowledge": [
+    {
+      "id": "string (K1, K2, etc.)",
+      "item": "string (what students need to know)",
+      "classification": "string or null (set in Stage 2b)"
+    }
+  ]
+}
+```
+
+**Utility Script:** See [scripts/parse_competency.py](./scripts/parse_competency.py) for session management functions:
+- `generate_session_id()` - Creates UUID for session
+- `create_session_directory(session_id)` - Creates session folder
+- `save_input(session_id, input_data)` - Saves Stage 1 input
+- `load_input(session_id)` - Loads Stage 1 input
+- `save_breakdown(session_id, breakdown_data)` - Saves Stage 2 breakdown
+- `load_breakdown(session_id)` - Loads Stage 2 breakdown
+
+**Outputs:**
+- `02_competency_breakdown.json` saved in session directory
+- Teacher-approved decomposition of skill + required knowledge
+
+**Requirements Covered:**
+- COMP-03: Decompose competency into skill + knowledge
+
+**Next:** Stage 2b
 
 ---
 
