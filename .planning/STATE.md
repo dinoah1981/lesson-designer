@@ -11,27 +11,27 @@ See: .planning/PROJECT.md (updated 2025-01-25)
 ## Current Position
 
 Phase: 1 of 5 (Core Lesson Generation)
-Plan: 3 of 6 complete
+Plan: 5 of 6 complete
 Status: In progress
-Last activity: 2026-01-25 — Completed 01-03-PLAN.md (Marzano-based lesson design and validation)
+Last activity: 2026-01-25 — Completed 01-05-PLAN.md (Word document generation for student materials)
 
-Progress: [███░░░░░░░] 30%
+Progress: [█████░░░░░] 50%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 3
-- Average duration: 7 min
-- Total execution time: 22 minutes
+- Total plans completed: 5
+- Average duration: 6 min
+- Total execution time: 28 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-core-lesson-generation | 3 | 22min | 7min |
+| 01-core-lesson-generation | 5 | 28min | 6min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (8min), 01-02 (6min), 01-03 (8min)
+- Last 5 plans: 01-01 (8min), 01-02 (6min), 01-03 (8min), 01-04 (est), 01-05 (6min)
 - Trend: Stable velocity
 
 *Updated after each plan completion*
@@ -53,6 +53,8 @@ Recent decisions affecting current work:
 - **Lesson type distributions (01-03):** Each lesson type has recommended Marzano level distribution (e.g., novel_application: 50% knowledge_utilization)
 - **Validation exit codes (01-03):** Exit 0=pass, 1=warnings, 2=fail/block - controls workflow progression
 - **Maximum 3 validation attempts (01-03):** After 3 failures, escalate to teacher for guidance
+- **Material type mapping (01-05):** Direct lesson-to-material mapping (introducing->worksheet, practicing->problem_set, etc.)
+- **Assessment integration (01-05):** Every document includes assessment (exit_ticket, embedded, or performance) per ASMT-01
 
 ### Pending Todos
 
@@ -65,6 +67,9 @@ None yet.
 - ✓ Marzano framework reference: Created MARZANO.md (610 lines) - well within token limits
 - ✓ Teacher input workflow: Stages 1, 2, 2b complete with session management
 - ✓ Lesson design workflow: Stage 3 and 3b complete with validation script
+- ✓ PowerPoint generation: Stage 5 Part 1 complete with generate_slides.py (01-04)
+- ✓ Word generation: Stage 5 Part 2 complete with generate_worksheet.py (01-05)
+- ✓ Output validation: Combined validate_outputs.py for both PPTX and DOCX (01-05)
 
 **Phase 5 readiness:**
 - Context management: Multi-lesson sequences require empirical testing of context compression strategies (flagged in research)
@@ -73,8 +78,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25 (Phase 1 Plan 03 execution)
-Stopped at: Completed 01-03-PLAN.md - Marzano-based lesson design and validation
+Last session: 2026-01-25 (Phase 1 Plan 05 execution)
+Stopped at: Completed 01-05-PLAN.md - Word document generation for student materials
 Resume file: None
 
 ---
