@@ -14,6 +14,7 @@ Checks:
     - Hidden slide contains required sections (objective, agenda, misconceptions, tips)
     - Font sizes meet 16pt minimum for visible text - SLID-04
     - Title slide has content
+    - Discussion slides have time allocations and facilitation notes (Phase 2)
 
     Word Document (.docx):
     - File exists and can be opened
@@ -21,6 +22,10 @@ Checks:
     - Has required sections (objectives, activities)
     - Has assessment section - ASMT-01
     - Has minimum paragraph count
+    - Answer lines are double-spaced (>= 1.8) (Phase 2)
+
+    Assessment Files (.docx):
+    - Rubric tables or answer space present (Phase 2)
 
 Exit codes:
     0 = PASSED - All files valid
@@ -35,6 +40,9 @@ Requirements covered:
     - SLID-02: Hidden first slide with lesson plan
     - SLID-04: 16pt font minimum
     - ASMT-01: Each lesson includes assessment of its objective
+    - Phase 2: Double-spacing for answer lines
+    - Phase 2: Discussion facilitation structure
+    - Phase 2: Assessment rubrics
 """
 
 import os
@@ -45,6 +53,134 @@ from typing import List, Tuple, Dict, Any
 from pptx import Presentation
 from pptx.util import Pt
 from docx import Document
+
+
+def validate_discussion_slides(filepath: str) -> Tuple[List[str], List[str]]:
+    """
+    Validate discussion slides have proper structure and facilitation notes.
+
+    Phase 2 requirement: Discussion slides should include time allocations
+    and presenter notes with facilitation guidance.
+
+    Args:
+        filepath: Path to .pptx file
+
+    Returns:
+        Tuple of (errors: list, warnings: list)
+    """
+    errors = []
+    warnings = []
+
+    try:
+        prs = Presentation(filepath)
+    except Exception as e:
+        return [], []  # Will be caught by main validation
+
+    # Look for discussion-related slides
+    discussion_slides = []
+    for i, slide in enumerate(prs.slides):
+        if slide._element.get('show') == '0':
+            continue  # Skip hidden slides
+
+        slide_text = ''
+        for shape in slide.shapes:
+            if hasattr(shape, 'text'):
+                slide_text += shape.text.lower()
+
+        # Check for discussion indicators
+        if any(keyword in slide_text for keyword in ['discussion', 'debrief', 'reflect']):
+            discussion_slides.append((i, slide))
+
+    if not discussion_slides:
+        # No discussion slides - not an error, just not applicable
+        return errors, warnings
+
+    # Validate each discussion slide
+    for idx, slide in discussion_slides:
+        slide_text = ''
+        for shape in slide.shapes:
+            if hasattr(shape, 'text'):
+                slide_text += shape.text.lower()
+
+        # Check for time allocation (e.g., "5 min", "10 minutes")
+        has_time = any(word in slide_text for word in ['min', 'minute'])
+
+        # Check presenter notes for facilitation guidance
+        has_notes = slide.has_notes_slide and slide.notes_slide.notes_text_frame.text.strip()
+        notes_text = slide.notes_slide.notes_text_frame.text.lower() if has_notes else ''
+
+        # Look for facilitation keywords in notes
+        facilitation_keywords = ['time allocation', 'watch for', 'prompts', 'ask', 'facilitate']
+        has_facilitation = any(keyword in notes_text for keyword in facilitation_keywords)
+
+        if not has_time:
+            warnings.append(f"Discussion slide {idx + 1} missing time allocation")
+
+        if not has_notes:
+            warnings.append(f"Discussion slide {idx + 1} missing presenter notes")
+        elif not has_facilitation:
+            warnings.append(
+                f"Discussion slide {idx + 1} notes may be missing facilitation guidance "
+                f"(TIME ALLOCATION, WATCH FOR, PROMPTS)"
+            )
+
+    return errors, warnings
+
+
+def validate_assessment(filepath: str) -> Tuple[List[str], List[str]]:
+    """
+    Validate assessment files have proper structure.
+
+    Phase 2 requirement: Assessment files should include rubrics or answer space.
+
+    Args:
+        filepath: Path to .docx file
+
+    Returns:
+        Tuple of (errors: list, warnings: list)
+    """
+    errors = []
+    warnings = []
+
+    # Check if file looks like an assessment
+    filename = os.path.basename(filepath).lower()
+    if not any(keyword in filename for keyword in ['assessment', 'quiz', 'test', 'performance', 'socratic']):
+        # Not an assessment file
+        return errors, warnings
+
+    try:
+        doc = Document(filepath)
+    except Exception as e:
+        return [], []  # Will be caught by main validation
+
+    # Get all text
+    text_parts = []
+    for para in doc.paragraphs:
+        text_parts.append(para.text)
+
+    for table in doc.tables:
+        for row in table.rows:
+            for cell in row.cells:
+                text_parts.append(cell.text)
+
+    text = '\n'.join(text_parts)
+    text_lower = text.lower()
+
+    # Check for rubric indicators
+    has_rubric = any(keyword in text_lower for keyword in [
+        'rubric', 'criteria', 'advanced', 'proficient', 'developing', 'beginning',
+        'points', 'score'
+    ])
+
+    # Check for answer space (underscore lines)
+    has_answer_space = any('_' in para.text for para in doc.paragraphs)
+
+    if not has_rubric and not has_answer_space:
+        warnings.append(
+            f"Assessment file may be missing rubric table or answer space"
+        )
+
+    return errors, warnings
 
 
 def validate_pptx(filepath: str) -> Tuple[List[str], List[str]]:
@@ -152,6 +288,52 @@ def validate_pptx(filepath: str) -> Tuple[List[str], List[str]]:
 
     if small_font_count > 0:
         warnings.append(f"Found {small_font_count} text elements below 16pt minimum (SLID-04)")
+
+    return errors, warnings
+
+
+def validate_worksheet_spacing(filepath: str) -> Tuple[List[str], List[str]]:
+    """
+    Validate worksheet has double-spacing for answer lines.
+
+    Phase 2 requirement: Answer lines with underscores should be double-spaced
+    to provide adequate room for student writing.
+
+    Args:
+        filepath: Path to .docx file
+
+    Returns:
+        Tuple of (errors: list, warnings: list)
+    """
+    errors = []
+    warnings = []
+
+    try:
+        doc = Document(filepath)
+    except Exception as e:
+        return [], []  # Will be caught by main validation
+
+    # Find paragraphs with underscore answer lines
+    answer_paragraphs = [p for p in doc.paragraphs if '_' in p.text]
+
+    if not answer_paragraphs:
+        # No answer lines found - might be simulation or assessment file
+        return errors, warnings
+
+    # Check spacing on answer lines
+    double_spaced_count = 0
+    for para in answer_paragraphs:
+        if para.paragraph_format.line_spacing:
+            if para.paragraph_format.line_spacing >= 1.8:
+                double_spaced_count += 1
+
+    # Expect at least 80% of answer lines to be double-spaced
+    expected_threshold = len(answer_paragraphs) * 0.8
+    if double_spaced_count < expected_threshold:
+        warnings.append(
+            f"Worksheet spacing: Only {double_spaced_count}/{len(answer_paragraphs)} "
+            f"answer lines are double-spaced (expected >= 1.8 line spacing)"
+        )
 
     return errors, warnings
 
@@ -341,6 +523,8 @@ def validate_outputs(output_dir: str) -> Tuple[bool, int, int]:
     Expected files:
         - 05_slides.pptx
         - 06_worksheet.docx
+        - Optional: simulation HTML files
+        - Optional: assessment .docx files
 
     Generates:
         - 07_validation_report.txt
@@ -361,6 +545,12 @@ def validate_outputs(output_dir: str) -> Tuple[bool, int, int]:
         errors, warnings = validate_pptx(pptx_path)
         all_errors.extend([f"[PowerPoint] {e}" for e in errors])
         all_warnings.extend([f"[PowerPoint] {w}" for w in warnings])
+
+        # Phase 2: Validate discussion slides
+        disc_errors, disc_warnings = validate_discussion_slides(pptx_path)
+        all_errors.extend([f"[PowerPoint Discussion] {e}" for e in disc_errors])
+        all_warnings.extend([f"[PowerPoint Discussion] {w}" for w in disc_warnings])
+
         file_status['05_slides.pptx'] = 'VALID' if not errors else 'INVALID'
     else:
         all_errors.append("[PowerPoint] Missing: 05_slides.pptx")
@@ -372,10 +562,25 @@ def validate_outputs(output_dir: str) -> Tuple[bool, int, int]:
         errors, warnings = validate_docx(docx_path)
         all_errors.extend([f"[Word] {e}" for e in errors])
         all_warnings.extend([f"[Word] {w}" for w in warnings])
+
+        # Phase 2: Validate worksheet spacing
+        spacing_errors, spacing_warnings = validate_worksheet_spacing(docx_path)
+        all_errors.extend([f"[Word Spacing] {e}" for e in spacing_errors])
+        all_warnings.extend([f"[Word Spacing] {w}" for w in spacing_warnings])
+
         file_status['06_worksheet.docx'] = 'VALID' if not errors else 'INVALID'
     else:
         all_errors.append("[Word] Missing: 06_worksheet.docx")
         file_status['06_worksheet.docx'] = 'MISSING'
+
+    # Phase 2: Validate assessment files (if present)
+    for filename in os.listdir(output_dir):
+        if filename.endswith('.docx') and any(keyword in filename.lower() for keyword in ['assessment', 'quiz', 'test', 'performance', 'socratic']):
+            assess_path = os.path.join(output_dir, filename)
+            assess_errors, assess_warnings = validate_assessment(assess_path)
+            all_errors.extend([f"[Assessment - {filename}] {e}" for e in assess_errors])
+            all_warnings.extend([f"[Assessment - {filename}] {w}" for w in assess_warnings])
+            file_status[filename] = 'VALID' if not assess_errors else 'INVALID'
 
     # Generate report
     report_path = generate_validation_report(output_dir, all_errors, all_warnings, file_status)
