@@ -7,8 +7,20 @@ lesson designer workflow. Ensures files meet quality requirements before
 presenting to teacher.
 
 Checks:
-    - PowerPoint: hidden slide, minimum slides, font sizes, structure
-    - Word: no unrendered tags, assessment section, minimum content
+    PowerPoint (.pptx):
+    - File exists and can be opened
+    - Has minimum number of slides (at least 4: lesson plan + title + objectives + 1 activity)
+    - First slide is hidden (lesson plan for teacher) - SLID-02
+    - Hidden slide contains required sections (objective, agenda, misconceptions, tips)
+    - Font sizes meet 16pt minimum for visible text - SLID-04
+    - Title slide has content
+
+    Word Document (.docx):
+    - File exists and can be opened
+    - No unrendered Jinja2 template tags ({{ or {%})
+    - Has required sections (objectives, activities)
+    - Has assessment section - ASMT-01
+    - Has minimum paragraph count
 
 Exit codes:
     0 = PASSED - All files valid
@@ -18,6 +30,11 @@ Exit codes:
 Usage:
     python validate_outputs.py <session_directory>
     python validate_outputs.py .lesson-designer/sessions/{session_id}
+
+Requirements covered:
+    - SLID-02: Hidden first slide with lesson plan
+    - SLID-04: 16pt font minimum
+    - ASMT-01: Each lesson includes assessment of its objective
 """
 
 import os
@@ -73,14 +90,34 @@ def validate_pptx(filepath: str) -> Tuple[List[str], List[str]]:
 
     # Check for hidden lesson plan slide (SLID-02)
     has_hidden_slide = False
-    for slide in prs.slides:
+    hidden_slide_idx = None
+    for i, slide in enumerate(prs.slides):
         show_value = slide._element.get('show')
         if show_value == '0':
             has_hidden_slide = True
+            hidden_slide_idx = i
             break
 
     if not has_hidden_slide:
         warnings.append("No hidden lesson plan slide found (SLID-02)")
+    else:
+        # Check hidden slide content has required sections
+        hidden_slide = prs.slides[hidden_slide_idx]
+        slide_text = ''
+        for shape in hidden_slide.shapes:
+            if hasattr(shape, 'text'):
+                slide_text += shape.text.lower()
+
+        # Check for required lesson plan sections
+        required_sections = {
+            'objective': 'Objective section',
+            'agenda': 'Agenda with timing',
+            'misconception': 'Anticipated misconceptions',
+            'tip': 'Delivery tips'
+        }
+        for keyword, description in required_sections.items():
+            if keyword not in slide_text:
+                warnings.append(f"Hidden lesson plan may be missing {description}")
 
     # Check title slide (first visible slide)
     first_visible_idx = 0
