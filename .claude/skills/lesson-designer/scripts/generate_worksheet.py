@@ -30,6 +30,16 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 
+# Lines of answer space by activity type
+WRITING_SPACE_CONFIG = {
+    'retrieval': 2,           # Quick recall, less space needed
+    'comprehension': 3,       # Explanations need moderate space
+    'analysis': 5,            # Detailed responses need more space
+    'knowledge_utilization': 6,  # Complex responses need most space
+    'default': 3
+}
+
+
 def load_lesson_design(lesson_path: str) -> Dict[str, Any]:
     """Load lesson design from JSON file."""
     with open(lesson_path, 'r', encoding='utf-8') as f:
@@ -218,6 +228,9 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
         instructions = activity.get('instructions', [])
         materials = activity.get('materials', [])
 
+        # Determine answer line count based on cognitive complexity
+        answer_line_count = WRITING_SPACE_CONFIG.get(marzano_level, WRITING_SPACE_CONFIG['default'])
+
         # Skip exit ticket activities - we'll add that separately
         if 'exit' in name.lower() and 'ticket' in name.lower():
             continue
@@ -241,7 +254,7 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
             if isinstance(items_to_rank, list) and len(items_to_rank) > 0:
                 add_ranking_table(doc, items_to_rank[:5])  # Max 5 items
             add_instructions(doc, "Explain your #1 choice:")
-            add_answer_lines(doc, 2)
+            add_answer_lines(doc, answer_line_count)
 
         # Check for definition/vocabulary activities
         elif any(word in name.lower() for word in ['definition', 'vocabulary', 'terms', 'key words']):
@@ -249,17 +262,17 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
             if vocab:
                 add_definition_table(doc, vocab[:6])  # Max 6 terms
             else:
-                add_answer_lines(doc, 3)
+                add_answer_lines(doc, answer_line_count)
 
         # Check for discussion/notes activities
         elif any(word in name.lower() for word in ['discussion', 'notes', 'debrief']):
             # Add discussion questions if available
             questions = activity.get('discussion_questions', activity.get('questions', []))
             if questions:
-                add_numbered_questions(doc, questions[:3], with_answer_space=True)
+                add_numbered_questions(doc, questions[:3], with_answer_space=True, num_lines=answer_line_count)
             else:
                 add_instructions(doc, "Discussion Notes:")
-                add_answer_lines(doc, 3)
+                add_answer_lines(doc, answer_line_count)
 
         # Check for analysis/application activities
         elif marzano_level in ['analysis', 'knowledge_utilization']:
@@ -267,11 +280,11 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
             student_output = activity.get('student_output', '')
             if student_output:
                 add_instructions(doc, f"Your task: {student_output}")
-            add_answer_lines(doc, 5)
+            add_answer_lines(doc, answer_line_count)
 
         # Default: simple answer space
         else:
-            add_answer_lines(doc, 3)
+            add_answer_lines(doc, answer_line_count)
 
         part_num += 1
 
@@ -324,6 +337,17 @@ def validate_output(output_path: str) -> tuple:
     # Check for tables (should have at least one for compact format)
     if len(doc.tables) == 0:
         warnings.append("No tables found - consider using tables for structured content")
+
+    # Check for double-spacing in answer paragraphs
+    answer_paragraphs = [p for p in doc.paragraphs if '_' in p.text]
+    if answer_paragraphs:
+        # Check if at least some answer lines have double-spacing
+        double_spaced_count = sum(1 for p in answer_paragraphs
+                                  if p.paragraph_format.line_spacing and p.paragraph_format.line_spacing >= 1.5)
+        if double_spaced_count < len(answer_paragraphs) * 0.5:
+            warnings.append(f"Only {double_spaced_count}/{len(answer_paragraphs)} answer lines have adequate spacing (expected >= 1.5)")
+    else:
+        warnings.append("No answer lines found - worksheet may lack adequate answer space")
 
     return True, errors, warnings
 
