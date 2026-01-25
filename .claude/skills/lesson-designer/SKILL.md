@@ -718,103 +718,121 @@ RESULT: PASSED WITH WARNINGS
 
 #### Part 1: Generate PowerPoint Slide Deck
 
-1. **Load the validated lesson design:**
+Claude generates professional slide decks directly using python-pptx, applying design principles that create visually engaging, teacher-ready presentations.
 
-   ```python
-   import json
-   session_path = f".lesson-designer/sessions/{session_id}"
-   with open(f"{session_path}/04_lesson_final.json", 'r') as f:
-       lesson = json.load(f)
-   ```
+**1. Load the validated lesson design:**
 
-2. **Generate the slide deck:**
+```python
+import json
+session_path = f".lesson-designer/sessions/{session_id}"
+with open(f"{session_path}/04_lesson_final.json", 'r') as f:
+    lesson = json.load(f)
+```
 
-   ```bash
-   python .claude/skills/lesson-designer/scripts/generate_slides.py \
-     .lesson-designer/sessions/{session_id}/04_lesson_final.json \
-     .claude/skills/lesson-designer/templates/slide_deck.pptx \
-     .lesson-designer/sessions/{session_id}/05_slides.pptx
-   ```
+**2. Create the presentation using python-pptx:**
 
-3. **What the script creates:**
+Write and execute python-pptx code to create the slide deck. Apply these design principles:
 
-   | Slide | Content | Visibility |
-   |-------|---------|------------|
-   | **Slide 1** | Lesson plan (objective, agenda, misconceptions, tips) | **Hidden** - Teacher reference only |
-   | **Slide 2** | Title slide with lesson title, grade, duration | Visible |
-   | **Slide 3** | Learning objectives as bullet points | Visible |
-   | **Slides 4+** | One slide per activity (sparse format) | Visible |
-   | **Final** | Assessment/exit ticket | Visible |
+**Design System (Professional Teacher-Ready Style):**
 
-4. **Sparse Format Philosophy:**
+```
+COLOR PALETTE:
+- Header background: #2D5A87 (professional blue)
+- Body text: #2C3E50 (dark charcoal)
+- Accent/timer: #F4D03F (gold yellow)
+- Content boxes: #FFFFFF (white) with subtle shadow
+- Activity icons: Use emoji for visual interest (📚 🎯 💭 ✍️ 🔍)
 
-   ```
-   IMPORTANT: Slides are designed for teacher-led instruction, not self-study.
+LAYOUT PRINCIPLES:
+- White content rectangles on colored backgrounds for readability
+- Timer display in corner showing duration (e.g., "⏱️ 5 min")
+- Activity type icons next to headers
+- Vocabulary terms in colored boxes with definitions
+- Agenda slide with checkboxes (☐) for each activity
 
-   Each slide contains:
-   - 3-5 talking points (not full paragraphs)
-   - Maximum 15 words per point
-   - Visual prompts where appropriate
+TYPOGRAPHY:
+- Titles: 40pt bold, can use italic for emphasis
+- Body: 20-24pt
+- Minimum 16pt for any visible text
+- Use consistent font (Calibri or Arial)
 
-   The full content is in presenter notes, which include:
-   - What to SAY (introduce concepts, explain)
-   - What to ASK (check understanding, prompt discussion)
-   - What to DEMO (show examples, model procedures)
-   - What to WATCH FOR (common mistakes, misconceptions)
+SLIDE STRUCTURE:
+- Slide 1: HIDDEN - Teacher lesson plan (objective, agenda, misconceptions, tips)
+- Slide 2: Title slide with lesson name, grade, duration, objective
+- Slide 3: Agenda with activity list and timing
+- Slides 4+: One slide per activity with sparse talking points
+- Final slide: Exit ticket / assessment
+```
 
-   Teachers should never read slides to students. Slides are conversation scaffolding.
-   ```
+**3. Required slide structure:**
 
-   **Example Content Transformation:**
+| Slide | Content | Design Notes |
+|-------|---------|--------------|
+| **Slide 1** | Lesson plan for teacher | **HIDDEN** - Set `slide._element.set('show', '0')` |
+| **Slide 2** | Title, grade, duration | Large title, accent color bar |
+| **Slide 3** | Agenda with timing | Checkbox list (☐) with durations |
+| **Slides 4+** | Activity content | Icon + timer + 3-5 bullet points |
+| **Final** | Assessment/exit ticket | Numbered questions |
 
-   ```
-   BAD (dense self-study format):
-   "Photosynthesis is the process by which green plants and some other
-   organisms use sunlight to synthesize foods from carbon dioxide and water.
-   The process occurs primarily in chloroplasts and produces oxygen as a byproduct.
-   This chemical reaction can be represented by the equation: 6CO2 + 6H2O -> C6H12O6 + 6O2."
+**4. Sparse Format Philosophy:**
 
-   GOOD (sparse teacher-led format):
-   - Light + CO2 + H2O -> Glucose + O2
-   - Occurs in chloroplasts
-   - Plants make their own food
-   - Oxygen released as byproduct
+```
+IMPORTANT: Slides are designed for teacher-led instruction, not self-study.
 
-   Presenter notes:
-   SAY: "Today we're exploring how plants make their own food - photosynthesis."
-   ASK: "What do plants need to survive? Where do they get their energy?"
-   DEMO: Point to diagram showing chloroplast structure.
-   WATCH FOR: Students may think plants "eat" soil - clarify they make food from light.
-   ```
+Each slide contains:
+- 3-5 talking points (not full paragraphs)
+- Maximum 15 words per point
+- Activity icon and timer in header area
 
-5. **Font Size Requirements:**
+The full content is in presenter notes, which include:
+- SAY: What to tell students
+- ASK: Questions to check understanding
+- DEMO: What to show or model
+- WATCH FOR: Common mistakes to address
 
-   | Element | Size | Requirement |
-   |---------|------|-------------|
-   | Title text | 36-40pt | Above 16pt minimum |
-   | Body text | 20pt | Above 16pt minimum |
-   | Presenter notes | 12pt | Not visible during presentation |
+Teachers should never read slides to students. Slides are conversation scaffolding.
+```
 
-6. **If slide generation fails:**
+**5. Example code structure:**
 
-   - Check that lesson design JSON is valid (`04_lesson_final.json`)
-   - Check that template file exists at `templates/slide_deck.pptx`
-   - Review error message for specific issue
-   - Most common issues:
-     - Missing required fields in lesson design (title, activities)
-     - Template file not found or corrupted
-     - Invalid activity structure (missing duration or marzano_level)
+```python
+from pptx import Presentation
+from pptx.util import Inches, Pt
+from pptx.dml.color import RgbColor
+from pptx.enum.text import PP_ALIGN
 
-   ```bash
-   # Verify lesson JSON is valid
-   python -c "import json; json.load(open('.lesson-designer/sessions/{session_id}/04_lesson_final.json'))"
-   ```
+prs = Presentation()
+prs.slide_width = Inches(13.333)
+prs.slide_height = Inches(7.5)
+
+# Colors
+HEADER_BLUE = RgbColor(0x2D, 0x5A, 0x87)
+BODY_CHARCOAL = RgbColor(0x2C, 0x3E, 0x50)
+ACCENT_GOLD = RgbColor(0xF4, 0xD0, 0x3F)
+
+# Slide 1: Hidden lesson plan
+slide1 = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+slide1._element.set('show', '0')  # Hide this slide
+# Add lesson plan content...
+
+# Slide 2: Title slide with design elements
+slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+# Add colored header shape, white content area, title text...
+
+# Continue for each activity...
+
+prs.save(f"{session_path}/05_slides.pptx")
+```
+
+**6. Save to session directory:**
+
+Output: `.lesson-designer/sessions/{session_id}/05_slides.pptx`
 
 **Requirements Covered (Part 1):**
 - SLID-01: Tool generates actual .pptx files
 - SLID-02: Hidden first slide with lesson plan
 - SLID-03: Sparse, teacher-led format (talking points, not paragraphs)
-- SLID-04: 16pt font minimum (uses 20pt for body, 36pt+ for titles)
+- SLID-04: 16pt font minimum (uses 20pt+ for body, 40pt for titles)
 
 #### Part 2: Generate Student Materials (Word Document)
 
@@ -1225,15 +1243,12 @@ python .claude/skills/lesson-designer/scripts/validate_marzano.py \
   .lesson-designer/sessions/{session_id}/03_lesson_design_v1.json
 
 # Stage 5: Generate slides
-python .claude/skills/lesson-designer/scripts/generate_slides.py \
-  .lesson-designer/sessions/{session_id}/04_lesson_final.json \
-  .claude/skills/lesson-designer/templates/slide_deck.pptx \
-  .lesson-designer/sessions/{session_id}/05_slides.pptx
+# Claude generates slides directly using python-pptx (see design principles above)
+# No script required - Claude writes and executes the code
 
 # Stage 5: Generate worksheet
 python .claude/skills/lesson-designer/scripts/generate_worksheet.py \
   .lesson-designer/sessions/{session_id}/04_lesson_final.json \
-  .claude/skills/lesson-designer/templates/student_worksheet.docx \
   .lesson-designer/sessions/{session_id}/06_worksheet.docx
 
 # Stage 6: Validate outputs
@@ -1266,6 +1281,6 @@ The lesson includes 45% higher-order thinking activities...
 
 ---
 
-**Version:** 1.2.0
+**Version:** 1.3.0
 **Last updated:** 2026-01-25
 **Framework:** [Marzano's New Taxonomy](./MARZANO.md)

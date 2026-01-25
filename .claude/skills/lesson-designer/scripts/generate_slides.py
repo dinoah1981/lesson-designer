@@ -1,541 +1,455 @@
 #!/usr/bin/env python3
 """
-PowerPoint Slide Deck Generation Script
+Generate Professional Slide Deck with Design System
 
-Generates professionally-designed, classroom-ready PowerPoint presentations.
-Uses a coordinated color palette and typography matching high-quality lesson slides.
+Creates visually engaging, teacher-ready presentations using a professional
+design system with coordinated colors, white content boxes, and activity icons.
 
-Design principles:
-- Coordinated color palette (blue headers, dark body, red accents)
-- Italic titles for visual interest
-- Color-coded elements
-- Gray italic for hints/tips
-- Numbered steps with visual indicators
+Design principles based on Claude's natural presentation design capabilities.
 """
 
-import json
-import os
-import sys
-from typing import Dict, List, Any, Optional
-
 from pptx import Presentation
-from pptx.util import Pt, Inches
+from pptx.util import Inches, Pt
 from pptx.dml.color import RGBColor
-from pptx.enum.text import PP_ALIGN, MSO_ANCHOR
-from pptx.oxml.ns import qn
+from pptx.enum.text import PP_ALIGN
+from pptx.enum.shapes import MSO_SHAPE
+import json
+import sys
+import os
 
+# Design colors
+HEADER_BLUE = RGBColor(0x2D, 0x5A, 0x87)
+BODY_CHARCOAL = RGBColor(0x2C, 0x3E, 0x50)
+ACCENT_GOLD = RGBColor(0xF4, 0xD0, 0x3F)
+WHITE = RGBColor(0xFF, 0xFF, 0xFF)
+LIGHT_GRAY = RGBColor(0xF5, 0xF5, 0xF5)
 
-# Professional color palette
-COLORS = {
-    'primary_blue': RGBColor(0x2D, 0x5A, 0x87),     # #2D5A87 - Headers, titles
-    'dark_body': RGBColor(0x2C, 0x3E, 0x50),        # #2C3E50 - Main body text
-    'secondary_gray': RGBColor(0x34, 0x49, 0x5E),   # #34495E - Secondary text
-    'accent_red': RGBColor(0xE7, 0x4C, 0x3C),       # #E74C3C - Emphasis, key points
-    'hint_gray': RGBColor(0x7F, 0x8C, 0x8D),        # #7F8C8D - Hints, tips, timing
-    'white': RGBColor(0xFF, 0xFF, 0xFF),            # White for contrast
-    'timer_yellow': RGBColor(0xF4, 0xD0, 0x3F),     # #F4D03F - Timer display
-    'vocab_blue': RGBColor(0x1E, 0x40, 0xAF),       # #1E40AF - Vocabulary terms
-    'vocab_green': RGBColor(0x06, 0x5F, 0x46),      # #065F46 - Definitions
-}
-
-# Activity icons
-ACTIVITY_ICONS = {
-    'do now': '✏️',
-    'entrance': '✏️',
-    'discussion': '💬',
-    'debrief': '💬',
-    'notes': '📝',
-    'vocabulary': '📚',
-    'activity': '🎮',
-    'simulation': '🎮',
-    'group': '👥',
-    'exit': '🎯',
-    'review': '🔄',
-    'practice': '💪',
-    'analyze': '🔍',
-    'predict': '🔮',
-    'question': '❓',
-    'default': '📌'
+# Activity icons by Marzano level
+ICONS = {
+    'retrieval': '🔄',
+    'comprehension': '📚',
+    'analysis': '🔍',
+    'knowledge_utilization': '💡'
 }
 
 
-def load_lesson_design(lesson_path: str) -> Dict[str, Any]:
-    """Load lesson design from JSON file."""
-    with open(lesson_path, 'r', encoding='utf-8') as f:
-        return json.load(f)
+def add_header_bar(prs, slide, title_text, subtitle_text=None, timer_text=None):
+    """Add professional header bar with title."""
+    # Header background
+    header = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, Inches(1.5)
+    )
+    header.fill.solid()
+    header.fill.fore_color.rgb = HEADER_BLUE
+    header.line.fill.background()
+
+    # Title text
+    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(10), Inches(0.8))
+    title_frame = title_box.text_frame
+    title_p = title_frame.paragraphs[0]
+    title_run = title_p.add_run()
+    title_run.text = title_text
+    title_run.font.size = Pt(40)
+    title_run.font.bold = True
+    title_run.font.color.rgb = WHITE
+    title_run.font.italic = True
+
+    # Subtitle if provided
+    if subtitle_text:
+        sub_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(10), Inches(0.4))
+        sub_frame = sub_box.text_frame
+        sub_p = sub_frame.paragraphs[0]
+        sub_run = sub_p.add_run()
+        sub_run.text = subtitle_text
+        sub_run.font.size = Pt(20)
+        sub_run.font.color.rgb = WHITE
+
+    # Timer if provided
+    if timer_text:
+        timer_box = slide.shapes.add_textbox(Inches(11.5), Inches(0.5), Inches(1.5), Inches(0.5))
+        timer_frame = timer_box.text_frame
+        timer_p = timer_frame.paragraphs[0]
+        timer_p.alignment = PP_ALIGN.RIGHT
+        timer_run = timer_p.add_run()
+        timer_run.text = timer_text
+        timer_run.font.size = Pt(24)
+        timer_run.font.bold = True
+        timer_run.font.color.rgb = ACCENT_GOLD
 
 
-def get_activity_icon(activity_name: str) -> str:
-    """Get appropriate icon for activity based on name."""
-    name_lower = activity_name.lower()
-    for keyword, icon in ACTIVITY_ICONS.items():
-        if keyword in name_lower:
-            return icon
-    return ACTIVITY_ICONS['default']
-
-
-def set_shape_fill(shape, color: RGBColor):
-    """Set solid fill color for a shape."""
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = color
-
-
-def add_rounded_rectangle(slide, left, top, width, height, color: RGBColor):
-    """Add a rounded rectangle shape with solid fill."""
-    from pptx.enum.shapes import MSO_SHAPE
-    shape = slide.shapes.add_shape(
+def add_content_box(prs, slide, left, top, width, height):
+    """Add white content rectangle with subtle border."""
+    box = slide.shapes.add_shape(
         MSO_SHAPE.ROUNDED_RECTANGLE,
         left, top, width, height
     )
-    shape.fill.solid()
-    shape.fill.fore_color.rgb = color
-    shape.line.fill.background()  # No border
-    return shape
+    box.fill.solid()
+    box.fill.fore_color.rgb = WHITE
+    box.line.color.rgb = RGBColor(0xDD, 0xDD, 0xDD)
+    box.line.width = Pt(1)
+    # Adjust corner radius
+    box.adjustments[0] = 0.05
+    return box
 
 
-def create_hidden_lesson_plan_slide(prs: Presentation, lesson: Dict) -> None:
-    """Create hidden first slide with complete lesson plan for teacher."""
-    layout = prs.slide_layouts[6]  # Blank
-    slide = prs.slides.add_slide(layout)
+def add_light_background(prs, slide):
+    """Add light gray background below header."""
+    bg = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(1.5),
+        prs.slide_width, Inches(6)
+    )
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = LIGHT_GRAY
+    bg.line.fill.background()
+    return bg
 
-    title = lesson.get('title', 'Lesson Plan')
-    objective = lesson.get('objective', '')
-    activities = lesson.get('activities', [])
-    hidden = lesson.get('hidden_slide_content', {})
-    misconceptions = hidden.get('misconceptions', [])
-    tips = hidden.get('delivery_tips', [])
+
+def create_hidden_lesson_plan(prs, slide, lesson):
+    """Create hidden first slide with lesson plan for teacher."""
+    slide._element.set('show', '0')  # HIDE this slide
 
     # Title
-    title_box = slide.shapes.add_textbox(Inches(0.3), Inches(0.15), Inches(9.4), Inches(0.4))
+    title = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(12), Inches(0.6))
+    tf = title.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = '📋 LESSON PLAN (Teacher Reference Only)'
+    run.font.size = Pt(28)
+    run.font.bold = True
+    run.font.color.rgb = HEADER_BLUE
+
+    # Objective
+    obj_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(12), Inches(0.8))
+    tf = obj_box.text_frame
+    p = tf.paragraphs[0]
+    run1 = p.add_run()
+    run1.text = 'OBJECTIVE: '
+    run1.font.bold = True
+    run1.font.size = Pt(16)
+    run2 = p.add_run()
+    run2.text = lesson['objective']
+    run2.font.size = Pt(16)
+
+    # Agenda
+    agenda_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.8), Inches(6), Inches(2.5))
+    tf = agenda_box.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = 'AGENDA:'
+    run.font.bold = True
+    run.font.size = Pt(16)
+    for item in lesson.get('hidden_slide_content', {}).get('agenda', []):
+        p = tf.add_paragraph()
+        run = p.add_run()
+        run.text = f"  • {item['activity']} ({item['duration']} min)"
+        run.font.size = Pt(14)
+
+    # Misconceptions
+    misc_box = slide.shapes.add_textbox(Inches(6.5), Inches(1.8), Inches(6), Inches(2.5))
+    tf = misc_box.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = 'WATCH FOR (Misconceptions):'
+    run.font.bold = True
+    run.font.size = Pt(16)
+    for misc in lesson.get('hidden_slide_content', {}).get('misconceptions', [])[:3]:
+        p = tf.add_paragraph()
+        run = p.add_run()
+        text = f"  ⚠️ {misc[:80]}..." if len(misc) > 80 else f"  ⚠️ {misc}"
+        run.text = text
+        run.font.size = Pt(12)
+
+    # Delivery tips
+    tips_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.5), Inches(12), Inches(2.5))
+    tf = tips_box.text_frame
+    p = tf.paragraphs[0]
+    run = p.add_run()
+    run.text = 'DELIVERY TIPS:'
+    run.font.bold = True
+    run.font.size = Pt(16)
+    for tip in lesson.get('hidden_slide_content', {}).get('delivery_tips', [])[:4]:
+        p = tf.add_paragraph()
+        run = p.add_run()
+        text = f"  💡 {tip[:100]}" if len(tip) > 100 else f"  💡 {tip}"
+        run.text = text
+        run.font.size = Pt(12)
+
+
+def create_title_slide(prs, slide, lesson):
+    """Create professional title slide."""
+    # Full blue background
+    bg = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(0),
+        prs.slide_width, prs.slide_height
+    )
+    bg.fill.solid()
+    bg.fill.fore_color.rgb = HEADER_BLUE
+    bg.line.fill.background()
+
+    # White content area
+    add_content_box(prs, slide, Inches(1), Inches(1.5), Inches(11.333), Inches(4.5))
+
+    # Title
+    title_box = slide.shapes.add_textbox(Inches(1.5), Inches(2), Inches(10.333), Inches(1.5))
     tf = title_box.text_frame
     p = tf.paragraphs[0]
-    p.text = "Lesson Agenda with Notes/Materials"
-    p.font.size = Pt(21)
-    p.font.color.rgb = COLORS['primary_blue']
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = lesson['title']
+    run.font.size = Pt(44)
+    run.font.bold = True
+    run.font.italic = True
+    run.font.color.rgb = BODY_CHARCOAL
 
-    # Objectives box (top right area)
-    obj_box = slide.shapes.add_textbox(Inches(6.5), Inches(0.5), Inches(3.3), Inches(1.2))
+    # Subtitle info
+    info_box = slide.shapes.add_textbox(Inches(1.5), Inches(3.5), Inches(10.333), Inches(0.6))
+    tf = info_box.text_frame
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    run.text = f"{lesson['grade_level']}  •  {lesson['duration']} minutes"
+    run.font.size = Pt(24)
+    run.font.color.rgb = BODY_CHARCOAL
+
+    # Objective
+    obj_box = slide.shapes.add_textbox(Inches(1.5), Inches(4.5), Inches(10.333), Inches(1))
     tf = obj_box.text_frame
+    p = tf.paragraphs[0]
+    p.alignment = PP_ALIGN.CENTER
+    run = p.add_run()
+    obj_text = lesson['objective'][:100] if len(lesson['objective']) > 100 else lesson['objective']
+    run.text = f"🎯 {obj_text}"
+    run.font.size = Pt(18)
+    run.font.color.rgb = BODY_CHARCOAL
+
+    # Gold accent bar at bottom
+    accent = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0), Inches(6.8),
+        prs.slide_width, Inches(0.7)
+    )
+    accent.fill.solid()
+    accent.fill.fore_color.rgb = ACCENT_GOLD
+    accent.line.fill.background()
+
+
+def create_agenda_slide(prs, slide, lesson):
+    """Create agenda slide with activity checklist."""
+    add_header_bar(prs, slide, "📋 Today's Agenda")
+    add_light_background(prs, slide)
+
+    # Agenda items with checkboxes
+    y_pos = 2.0
+    for activity in lesson['activities']:
+        icon = ICONS.get(activity['marzano_level'], '📌')
+
+        # Item box
+        add_content_box(prs, slide, Inches(1), Inches(y_pos), Inches(11.333), Inches(0.9))
+
+        # Activity name
+        text_box = slide.shapes.add_textbox(Inches(1.3), Inches(y_pos + 0.15), Inches(9), Inches(0.6))
+        tf = text_box.text_frame
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = f"☐ {icon} {activity['name']}"
+        run.font.size = Pt(22)
+        run.font.color.rgb = BODY_CHARCOAL
+
+        # Duration
+        dur_box = slide.shapes.add_textbox(Inches(10.5), Inches(y_pos + 0.15), Inches(1.5), Inches(0.6))
+        tf = dur_box.text_frame
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.RIGHT
+        run = p.add_run()
+        run.text = f"{activity['duration']} min"
+        run.font.size = Pt(18)
+        run.font.bold = True
+        run.font.color.rgb = ACCENT_GOLD
+
+        y_pos += 1.0
+
+
+def create_activity_slide(prs, slide, activity):
+    """Create slide for individual activity."""
+    icon = ICONS.get(activity['marzano_level'], '📌')
+
+    add_header_bar(
+        prs, slide,
+        f"{icon} {activity['name']}",
+        subtitle_text=activity['marzano_level'].replace('_', ' ').title(),
+        timer_text=f"⏱️ {activity['duration']}m"
+    )
+
+    add_light_background(prs, slide)
+
+    # Content box
+    add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(12.333), Inches(5))
+
+    # Instructions as bullet points
+    instr_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.1), Inches(11.7), Inches(4.5))
+    tf = instr_box.text_frame
     tf.word_wrap = True
 
-    # Split objective into parts for formatting
-    obj_text = objective[:150] if objective else 'Complete lesson objectives'
-    p = tf.paragraphs[0]
-    p.text = obj_text
-    p.font.size = Pt(9.75)
-    p.font.color.rgb = COLORS['secondary_gray']
-
-    # Activities list (main content)
-    y_pos = Inches(0.7)
-    total_time = 0
-
-    for i, act in enumerate(activities, 1):
-        name = act.get('name', f'Activity {i}')
-        duration = act.get('duration', 5)
-        total_time += duration
-        instructions = act.get('instructions', [])
-        brief = instructions[0][:50] if instructions else ''
-
-        # Number and name
-        act_box = slide.shapes.add_textbox(Inches(0.3), y_pos, Inches(6), Inches(0.4))
-        tf = act_box.text_frame
-
-        p = tf.paragraphs[0]
-        run = p.add_run()
-        run.text = f"{i}. {name} "
-        run.font.size = Pt(15)
-        run.font.bold = True
-        run.font.color.rgb = COLORS['primary_blue']
-
-        run = p.add_run()
-        run.text = f"({duration} mins): {brief}"
-        run.font.size = Pt(15)
-        run.font.color.rgb = COLORS['dark_body']
-
-        y_pos += Inches(0.35)
-
-    # Hide the slide
-    slide._element.set('show', '0')
-
-
-def create_title_slide(prs: Presentation, lesson: Dict) -> None:
-    """Create title slide with objective framing."""
-    layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(layout)
-
-    title = lesson.get('title', 'Today\'s Lesson')
-    objective = lesson.get('objective', '')
-    grade = lesson.get('grade_level', '')
-    duration = lesson.get('duration', 50)
-
-    # Main title - large and italic
-    title_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.5), Inches(9), Inches(1))
-    tf = title_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = title
-    p.font.size = Pt(36)
-    p.font.bold = True
-    p.font.italic = True
-    p.font.color.rgb = COLORS['primary_blue']
-    p.alignment = PP_ALIGN.CENTER
-
-    # Objective section
-    if objective:
-        # Label
-        obj_label = slide.shapes.add_textbox(Inches(0.5), Inches(2.7), Inches(9), Inches(0.3))
-        tf = obj_label.text_frame
-        p = tf.paragraphs[0]
-        p.text = "TODAY'S OBJECTIVE"
-        p.font.size = Pt(12)
-        p.font.bold = True
-        p.font.color.rgb = COLORS['primary_blue']
-        p.alignment = PP_ALIGN.CENTER
-
-        # Objective text
-        obj_box = slide.shapes.add_textbox(Inches(0.5), Inches(3.0), Inches(9), Inches(1))
-        tf = obj_box.text_frame
-        tf.word_wrap = True
-        p = tf.paragraphs[0]
-        p.text = objective
-        p.font.size = Pt(16)
-        p.font.color.rgb = COLORS['dark_body']
-        p.alignment = PP_ALIGN.CENTER
-
-    # Footer
-    footer_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.9), Inches(9), Inches(0.3))
-    tf = footer_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = f"{grade} | {duration} minutes"
-    p.font.size = Pt(10)
-    p.font.color.rgb = COLORS['hint_gray']
-    p.alignment = PP_ALIGN.CENTER
-
-
-def create_agenda_slide(prs: Presentation, lesson: Dict) -> None:
-    """Create agenda overview slide."""
-    layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(layout)
-
-    activities = lesson.get('activities', [])
-
-    # Title - italic
-    title_box = slide.shapes.add_textbox(Inches(0.4), Inches(0.3), Inches(4), Inches(0.6))
-    tf = title_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = "AGENDA"
-    p.font.size = Pt(28)
-    p.font.italic = True
-    p.font.color.rgb = COLORS['primary_blue']
-
-    # Agenda items
-    y_pos = Inches(1.0)
-    for i, act in enumerate(activities, 1):
-        name = act.get('name', f'Activity {i}')
-
-        item_box = slide.shapes.add_textbox(Inches(0.5), y_pos, Inches(4), Inches(0.35))
-        tf = item_box.text_frame
-        p = tf.paragraphs[0]
-
-        # Check mark + name
-        run = p.add_run()
-        run.text = "▢ "
-        run.font.size = Pt(14)
-        run.font.color.rgb = COLORS['secondary_gray']
-
-        run = p.add_run()
-        run.text = name
-        run.font.size = Pt(14)
-        run.font.color.rgb = COLORS['secondary_gray']
-
-        y_pos += Inches(0.35)
-
-
-def create_activity_slide(prs: Presentation, activity: Dict, activity_num: int) -> None:
-    """Create an activity slide with professional design."""
-    layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(layout)
-
-    name = activity.get('name', f'Activity {activity_num}')
-    duration = activity.get('duration', 10)
-    instructions = activity.get('instructions', [])
-    marzano = activity.get('marzano_level', 'comprehension')
-
-    icon = get_activity_icon(name)
-
-    # Title - italic with icon
-    title_box = slide.shapes.add_textbox(Inches(0.4), Inches(0.3), Inches(8), Inches(0.7))
-    tf = title_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = f"{icon} {name}"
-    p.font.size = Pt(26)
-    p.font.italic = True
-    p.font.color.rgb = COLORS['primary_blue']
-
-    # Timer (top right)
-    timer_box = slide.shapes.add_textbox(Inches(8.5), Inches(0.3), Inches(1.2), Inches(0.4))
-    tf = timer_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = f"{duration:02d}:00"
-    p.font.size = Pt(15)
-    p.font.color.rgb = COLORS['timer_yellow']
-    p.alignment = PP_ALIGN.RIGHT
-
-    # Instructions
-    if instructions:
-        y_pos = Inches(1.1)
-        for i, instr in enumerate(instructions[:5]):
-            instr_box = slide.shapes.add_textbox(Inches(0.5), y_pos, Inches(9), Inches(0.5))
-            tf = instr_box.text_frame
-            tf.word_wrap = True
+    # Use key_points if available, otherwise use instructions
+    key_points = activity.get('key_points', activity.get('instructions', []))[:5]
+    for i, point in enumerate(key_points):
+        if i == 0:
             p = tf.paragraphs[0]
-
-            # Truncate if too long
-            text = instr if len(instr) <= 80 else instr[:77] + '...'
-            p.text = f"• {text}"
-            p.font.size = Pt(16)
-            p.font.color.rgb = COLORS['dark_body']
-
-            y_pos += Inches(0.45)
-
-    # Hint/tip at bottom (if available)
-    student_output = activity.get('student_output', '')
-    if student_output:
-        hint_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.8), Inches(9), Inches(0.4))
-        tf = hint_box.text_frame
-        p = tf.paragraphs[0]
-        p.text = f"Output: {student_output}"
-        p.font.size = Pt(10)
-        p.font.italic = True
-        p.font.color.rgb = COLORS['hint_gray']
+        else:
+            p = tf.add_paragraph()
+        p.level = 0
+        run = p.add_run()
+        # Truncate long points
+        text = point if len(point) <= 60 else point[:57] + '...'
+        run.text = f"• {text}"
+        run.font.size = Pt(24)
+        run.font.color.rgb = BODY_CHARCOAL
+        p.space_after = Pt(12)
 
     # Add presenter notes
-    notes = build_presenter_notes(activity, activity_num)
-    slide.notes_slide.notes_text_frame.text = notes
+    notes_slide = slide.notes_slide
+    notes_tf = notes_slide.notes_text_frame
+    notes_tf.text = f"SAY: Introduce {activity['name']} activity\n\n"
+    notes_tf.text += "ASK: Check for understanding questions\n\n"
+    notes_tf.text += f"WATCH FOR: {activity.get('assessment_method', 'Student engagement')}\n\n"
+    notes_tf.text += "Instructions:\n"
+    for instr in activity.get('instructions', []):
+        notes_tf.text += f"- {instr}\n"
 
 
-def create_vocabulary_slide(prs: Presentation, lesson: Dict) -> None:
-    """Create vocabulary slide with color-coded terms."""
-    vocab = lesson.get('vocabulary', [])
-    if not vocab:
-        return
+def create_vocabulary_slide(prs, slide, vocab):
+    """Create vocabulary slide with terms and definitions."""
+    add_header_bar(prs, slide, "📖 Key Vocabulary")
+    add_light_background(prs, slide)
 
-    layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(layout)
+    y_pos = 1.8
+    for term in vocab[:5]:
+        # Term box
+        add_content_box(prs, slide, Inches(0.5), Inches(y_pos), Inches(3), Inches(0.9))
 
-    # Title
-    title_box = slide.shapes.add_textbox(Inches(0.4), Inches(0.3), Inches(9), Inches(0.6))
-    tf = title_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = "📚 Key Vocabulary"
-    p.font.size = Pt(26)
-    p.font.italic = True
-    p.font.color.rgb = COLORS['primary_blue']
-
-    # Vocabulary terms - color coded
-    term_colors = [
-        RGBColor(0x1E, 0x40, 0xAF),  # Blue
-        RGBColor(0x06, 0x5F, 0x46),  # Green
-        RGBColor(0x92, 0x40, 0x0E),  # Orange
-        RGBColor(0x99, 0x1B, 0x1B),  # Red
-        RGBColor(0x5B, 0x21, 0xB6),  # Purple
-    ]
-
-    y_pos = Inches(1.0)
-    for i, term in enumerate(vocab[:5]):
-        word = term.get('word', term.get('term', ''))
-        definition = term.get('definition', '')
-        color = term_colors[i % len(term_colors)]
-
-        # Term (bold, colored)
-        term_box = slide.shapes.add_textbox(Inches(0.5), y_pos, Inches(9), Inches(0.3))
-        tf = term_box.text_frame
-        p = tf.paragraphs[0]
-        p.text = word.upper()
-        p.font.size = Pt(12)
-        p.font.bold = True
-        p.font.color.rgb = color
-
-        # Definition
-        def_box = slide.shapes.add_textbox(Inches(0.5), y_pos + Inches(0.25), Inches(9), Inches(0.5))
-        tf = def_box.text_frame
-        tf.word_wrap = True
-        p = tf.paragraphs[0]
-        p.text = definition
-        p.font.size = Pt(10)
-        p.font.color.rgb = COLORS['secondary_gray']
-
-        y_pos += Inches(0.7)
-
-
-def create_exit_ticket_slide(prs: Presentation, lesson: Dict) -> None:
-    """Create exit ticket slide."""
-    layout = prs.slide_layouts[6]
-    slide = prs.slides.add_slide(layout)
-
-    assessment = lesson.get('assessment', {})
-    questions = assessment.get('questions', [])
-
-    # Title
-    title_box = slide.shapes.add_textbox(Inches(0.4), Inches(0.3), Inches(9), Inches(0.6))
-    tf = title_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = "🎯 Complete the Exit Ticket"
-    p.font.size = Pt(26)
-    p.font.italic = True
-    p.font.color.rgb = COLORS['primary_blue']
-
-    # Subtitle
-    subtitle_box = slide.shapes.add_textbox(Inches(0.5), Inches(0.9), Inches(9), Inches(0.4))
-    tf = subtitle_box.text_frame
-    p = tf.paragraphs[0]
-    p.text = lesson.get('title', 'Exit Ticket')
-    p.font.size = Pt(16)
-    p.font.bold = True
-    p.font.color.rgb = COLORS['dark_body']
-
-    # Questions
-    y_pos = Inches(1.5)
-    for i, q in enumerate(questions[:4], 1):
-        q_box = slide.shapes.add_textbox(Inches(0.5), y_pos, Inches(9), Inches(0.6))
-        tf = q_box.text_frame
-        tf.word_wrap = True
-        p = tf.paragraphs[0]
-
-        # Number
-        run = p.add_run()
-        run.text = f"{i}. "
-        run.font.size = Pt(11)
+        # Term text
+        t_box = slide.shapes.add_textbox(Inches(0.7), Inches(y_pos + 0.2), Inches(2.6), Inches(0.5))
+        tf = t_box.text_frame
+        run = tf.paragraphs[0].add_run()
+        run.text = term['word']
+        run.font.size = Pt(20)
         run.font.bold = True
-        run.font.color.rgb = COLORS['secondary_gray']
+        run.font.color.rgb = HEADER_BLUE
 
-        # Question
+        # Definition box
+        add_content_box(prs, slide, Inches(3.7), Inches(y_pos), Inches(9.133), Inches(0.9))
+
+        # Definition text
+        d_box = slide.shapes.add_textbox(Inches(3.9), Inches(y_pos + 0.15), Inches(8.7), Inches(0.6))
+        tf = d_box.text_frame
+        tf.word_wrap = True
+        run = tf.paragraphs[0].add_run()
+        def_text = term['definition'][:80] if len(term['definition']) > 80 else term['definition']
+        run.text = def_text
+        run.font.size = Pt(16)
+        run.font.color.rgb = BODY_CHARCOAL
+
+        y_pos += 1.0
+
+
+def create_exit_ticket_slide(prs, slide, assessment):
+    """Create exit ticket slide with questions."""
+    add_header_bar(prs, slide, "🎫 Exit Ticket")
+    add_light_background(prs, slide)
+
+    # Questions content box
+    add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(12.333), Inches(5))
+
+    questions = assessment.get('questions', [])
+    q_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.1), Inches(11.7), Inches(4.5))
+    tf = q_box.text_frame
+    tf.word_wrap = True
+
+    for i, q in enumerate(questions):
+        if i == 0:
+            p = tf.paragraphs[0]
+        else:
+            p = tf.add_paragraph()
         run = p.add_run()
-        run.text = q
-        run.font.size = Pt(11)
-        run.font.color.rgb = COLORS['secondary_gray']
-
-        y_pos += Inches(0.6)
-
-
-def build_presenter_notes(activity: Dict, activity_num: int) -> str:
-    """Build comprehensive presenter notes."""
-    lines = []
-
-    name = activity.get('name', f'Activity {activity_num}')
-    duration = activity.get('duration', 10)
-    marzano = activity.get('marzano_level', '').replace('_', ' ').title()
-    instructions = activity.get('instructions', [])
-    materials = activity.get('materials', [])
-
-    lines.append(f"ACTIVITY {activity_num}: {name}")
-    lines.append(f"Duration: {duration} minutes | Marzano Level: {marzano}")
-    lines.append("=" * 40)
-
-    if instructions:
-        lines.append("\nFULL INSTRUCTIONS:")
-        for i, instr in enumerate(instructions, 1):
-            lines.append(f"  {i}. {instr}")
-
-    if materials:
-        lines.append(f"\nMATERIALS: {', '.join(materials)}")
-
-    lines.append("\n" + "=" * 40)
-    lines.append("\nSAY: [Introduce this activity]")
-    lines.append("ASK: [Check for understanding]")
-    lines.append("WATCH FOR: [Common mistakes]")
-
-    return "\n".join(lines)
+        run.text = f"{i+1}. {q}"
+        run.font.size = Pt(22)
+        run.font.color.rgb = BODY_CHARCOAL
+        p.space_after = Pt(24)
 
 
-def generate_slide_deck(
-    lesson_path: str,
-    template_path: Optional[str] = None,
-    output_path: Optional[str] = None
-) -> str:
-    """Generate complete slide deck from lesson design."""
+def generate_slides(lesson_path: str, output_path: str) -> bool:
+    """Generate professional slide deck from lesson design."""
 
-    lesson = load_lesson_design(lesson_path)
-
-    if output_path is None:
-        input_dir = os.path.dirname(os.path.abspath(lesson_path))
-        output_path = os.path.join(input_dir, '05_slides.pptx')
+    # Load lesson data
+    with open(lesson_path, 'r', encoding='utf-8') as f:
+        lesson = json.load(f)
 
     # Create presentation
     prs = Presentation()
-    prs.slide_width = Inches(10)
-    prs.slide_height = Inches(5.625)
+    prs.slide_width = Inches(13.333)
+    prs.slide_height = Inches(7.5)
 
-    # 1. Hidden lesson plan slide
-    create_hidden_lesson_plan_slide(prs, lesson)
+    # Slide 1: Hidden lesson plan
+    slide1 = prs.slides.add_slide(prs.slide_layouts[6])  # Blank layout
+    create_hidden_lesson_plan(prs, slide1, lesson)
 
-    # 2. Title slide
-    create_title_slide(prs, lesson)
+    # Slide 2: Title slide
+    slide2 = prs.slides.add_slide(prs.slide_layouts[6])
+    create_title_slide(prs, slide2, lesson)
 
-    # 3. Agenda slide (if more than 2 activities)
-    activities = lesson.get('activities', [])
-    if len(activities) > 2:
-        create_agenda_slide(prs, lesson)
+    # Slide 3: Agenda
+    slide3 = prs.slides.add_slide(prs.slide_layouts[6])
+    create_agenda_slide(prs, slide3, lesson)
 
-    # 4. Vocabulary slide (if vocabulary exists)
-    if lesson.get('vocabulary'):
-        create_vocabulary_slide(prs, lesson)
+    # Activity slides
+    for activity in lesson['activities']:
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        create_activity_slide(prs, slide, activity)
 
-    # 5+. Activity slides
-    for i, activity in enumerate(activities, 1):
-        name = activity.get('name', '').lower()
-        if 'exit' in name and 'ticket' in name:
-            continue
-        create_activity_slide(prs, activity, i)
+    # Vocabulary slide (if vocabulary exists)
+    vocab = lesson.get('vocabulary', [])
+    if vocab:
+        slide_vocab = prs.slides.add_slide(prs.slide_layouts[6])
+        create_vocabulary_slide(prs, slide_vocab, vocab)
 
-    # Final: Exit ticket
-    if lesson.get('assessment'):
-        create_exit_ticket_slide(prs, lesson)
+    # Exit ticket slide
+    assessment = lesson.get('assessment', {})
+    if assessment.get('questions'):
+        slide_exit = prs.slides.add_slide(prs.slide_layouts[6])
+        create_exit_ticket_slide(prs, slide_exit, assessment)
 
-    # Save
+    # Save presentation
     prs.save(output_path)
-    print(f"Slide deck generated: {output_path}")
-
-    if validate_output(output_path):
-        print("Validation passed")
-
-    return output_path
-
-
-def validate_output(output_path: str) -> bool:
-    """Verify generated file is valid."""
-    try:
-        prs = Presentation(output_path)
-        if len(prs.slides) < 3:
-            print(f"Warning: Only {len(prs.slides)} slides")
-            return False
-        if prs.slides[0]._element.get('show') != '0':
-            print("Warning: First slide not hidden")
-        return True
-    except Exception as e:
-        print(f"Validation error: {e}")
-        return False
+    print(f"Created professional slide deck: {output_path}")
+    print(f"Total slides: {len(prs.slides)}")
+    return True
 
 
 def main():
     """CLI entry point."""
     if len(sys.argv) < 2:
-        print("Usage: python generate_slides.py <lesson.json> [template.pptx] [output.pptx]")
+        print("Usage: python create_professional_slides.py <lesson.json> [output.pptx]")
         sys.exit(1)
 
     lesson_path = sys.argv[1]
-    output_path = sys.argv[3] if len(sys.argv) > 3 else None
 
     if not os.path.exists(lesson_path):
-        print(f"Error: File not found: {lesson_path}")
+        print(f"Error: Lesson file not found: {lesson_path}", file=sys.stderr)
         sys.exit(1)
 
-    try:
-        generate_slide_deck(lesson_path, None, output_path)
-    except Exception as e:
-        print(f"Error: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    # Determine output path
+    if len(sys.argv) >= 3:
+        output_path = sys.argv[2]
+    else:
+        lesson_dir = os.path.dirname(os.path.abspath(lesson_path))
+        output_path = os.path.join(lesson_dir, '05_slides.pptx')
+
+    success = generate_slides(lesson_path, output_path)
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
