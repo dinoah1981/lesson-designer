@@ -903,64 +903,343 @@ If document generation fails:
 
 **Process:**
 
-Run the validation script on the session directory:
+#### Step 1: Run Output Validation
+
+Execute the validation script on the session directory:
 
 ```bash
 python .claude/skills/lesson-designer/scripts/validate_outputs.py \
-  .lesson-designer/sessions/{session_id}
+  .lesson-designer/sessions/{session_id}/
 ```
 
-**Validation Checks:**
+#### Step 2: Review Validation Report
+
+The script generates `07_validation_report.txt` in the session directory. Check the report for:
+
+**Exit Codes:**
+```
+Exit code 0: PASSED - All files valid, proceed to Stage 7
+Exit code 1: PASSED WITH WARNINGS - Files valid but have minor issues, can proceed
+Exit code 2: FAILED - Critical errors found, must fix before presenting
+```
+
+**Validation Checks Performed:**
 
 **PowerPoint (.pptx):**
 - File exists and can be opened
-- Has minimum number of slides (at least 3)
-- Has hidden lesson plan slide (SLID-02)
-- Font sizes meet 16pt minimum (SLID-04)
+- Has minimum number of slides (at least 4: lesson plan + title + objectives + 1 activity)
+- First slide is hidden (lesson plan for teacher) - SLID-02
+- Hidden slide contains required sections (objective, agenda, misconceptions, tips)
+- Font sizes meet 16pt minimum for visible text - SLID-04
+- Title slide has content
 
 **Word Document (.docx):**
 - File exists and can be opened
-- No unrendered Jinja2 template tags
+- No unrendered Jinja2 template tags ({{ or {%})
 - Has required sections (objectives, activities)
-- Has assessment section (ASMT-01)
+- Has assessment section - ASMT-01
 - Has minimum paragraph count
 
-**Interpreting Results:**
+#### Step 3: Handle Validation Results
+
+**If PASSED (exit code 0):**
+- Proceed directly to Stage 7
+
+**If PASSED WITH WARNINGS (exit code 1):**
+- Review warnings in the report
+- Decide if warnings are acceptable
+- If acceptable, proceed to Stage 7
+- If not, address issues and re-validate
+
+**If FAILED (exit code 2):**
+- Review error messages in the report
+- Address each error before presenting to teacher
+
+#### Common Issues and Fixes
 
 ```
-Exit code 0: PASSED - Proceed to Stage 7
-Exit code 1: PASSED WITH WARNINGS - Can proceed, review warnings
-Exit code 2: FAILED - Review errors, regenerate materials
+ISSUE: "First slide is not hidden"
+FIX: Check generate_slides.py is using slide._element.set('show', '0')
+     Re-run slide generation if needed
+
+ISSUE: "Font size below 16pt minimum"
+FIX: Template may have small fonts - update template or regenerate
+
+ISSUE: "Unrendered Jinja2 template tags"
+FIX: Check lesson design JSON has all required fields
+     Ensure 04_lesson_final.json is complete and valid
+
+ISSUE: "Missing assessment section"
+FIX: Ensure lesson design includes assessment with type and questions
+     Return to Stage 3 if assessment is missing from design
 ```
 
-**If Validation Fails:**
+#### Error Recovery Workflow
 
-1. Check the validation report at `07_validation_report.txt`
-2. Address specific errors (usually template rendering issues)
-3. Re-run Stage 5 to regenerate materials
-4. Re-run validation
+1. **If slides validation failed:**
+   - Check `04_lesson_final.json` is valid: `python -c "import json; json.load(open('.lesson-designer/sessions/{session_id}/04_lesson_final.json'))"`
+   - Re-run: `python .claude/skills/lesson-designer/scripts/generate_slides.py .lesson-designer/sessions/{session_id}/04_lesson_final.json`
+
+2. **If document validation failed:**
+   - Check template exists: `ls .claude/skills/lesson-designer/templates/student_worksheet.docx`
+   - Re-run: `python .claude/skills/lesson-designer/scripts/generate_worksheet.py .lesson-designer/sessions/{session_id}/04_lesson_final.json`
+
+3. **If assessment missing:**
+   - Return to Stage 3 to add assessment section to lesson design
+   - Re-validate with Marzano script
+   - Re-generate materials
 
 **Outputs:**
-- `07_validation_report.txt` - Detailed validation results
-- Validation pass/fail status
+- `07_validation_report.txt` - Detailed validation results with requirement checklist
+- Validation pass/fail status determining workflow progression
 
-**Next:** Stage 7 (if passed) or Stage 5 (if failed)
+**Requirements Covered:**
+- SLID-02: Hidden first slide with lesson plan (verified)
+- SLID-04: 16pt font minimum (verified)
+- MATL-01: Generated .docx file (verified)
+- ASMT-01: Formative assessment included (verified)
+
+**Next:** Stage 7 (if passed) or Stage 5 (if failed, after fixing issues)
 
 ---
 
 ### Stage 7: Present to Teacher
 
-**Purpose:** Deliver materials and explain lesson structure.
+**Purpose:** Deliver completed materials and summarize the lesson for teacher review.
+
+**Inputs:** Validated files from Stage 6 (05_slides.pptx, 06_worksheet.docx)
 
 **Process:**
-1. Summarize lesson objectives and flow
-2. Provide file paths
-3. Highlight key instructional moments
-4. Explain differentiation opportunities
 
-**Outputs:** Teacher-facing summary
+#### Step 1: Summarize What Was Created
 
-**Next:** Session complete
+Present a clear summary of the generated materials:
+
+```
+Your lesson materials are ready!
+
+Created for: {competency}
+Grade Level: {grade_level}
+Duration: {duration} minutes
+Lesson Type: {lesson_type}
+
+Files generated:
+- 05_slides.pptx - Slide deck with hidden lesson plan
+- 06_worksheet.docx - Student materials
+
+Cognitive rigor: {percentage}% higher-order thinking
+Assessment: {assessment_type}
+```
+
+**Example:**
+```
+Your lesson materials are ready!
+
+Created for: Students will analyze primary sources to evaluate historical claims
+Grade Level: 8th grade
+Duration: 50 minutes
+Lesson Type: Introducing
+
+Files generated:
+- 05_slides.pptx - Slide deck with hidden lesson plan (12 slides)
+- 06_worksheet.docx - Student worksheet with exit ticket
+
+Cognitive rigor: 55% higher-order thinking (analysis + knowledge utilization)
+Assessment: Exit ticket (2 questions)
+```
+
+#### Step 2: Provide File Locations
+
+Tell the teacher exactly where to find their files:
+
+```
+Files are saved in:
+.lesson-designer/sessions/{session_id}/
+
+Full paths:
+- Slides: .lesson-designer/sessions/{session_id}/05_slides.pptx
+- Worksheet: .lesson-designer/sessions/{session_id}/06_worksheet.docx
+
+You can open them directly or I can help you review any section.
+```
+
+#### Step 3: Highlight Key Features
+
+Explain the instructional design choices:
+
+```
+About your materials:
+
+SLIDE DECK:
+- First slide is HIDDEN - contains your lesson plan, objective, agenda, and tips
+- Slides are sparse (talking points only) - designed for teacher-led instruction
+- Full instructions are in presenter notes (click Notes pane to view)
+- Presenter notes include SAY/ASK/DEMO/WATCH FOR guidance
+
+STUDENT WORKSHEET:
+- Matches your lesson type ({material_type})
+- Includes {assessment_type} for formative assessment
+- Activities are formatted with space for student responses
+```
+
+#### Step 4: Offer Next Steps
+
+```
+What would you like to do next?
+
+- Review the slides (I'll show you the content)
+- Review the student materials (I'll show you the content)
+- Make adjustments (regenerate with changes)
+- Design another lesson (start fresh)
+- Refine this lesson (Phase 2 adds persona feedback)
+```
+
+#### Step 5: Handle Teacher Requests
+
+**If teacher wants to review slides:**
+- Read and display the slide content from the JSON
+- Highlight the hidden lesson plan content
+- Show presenter notes for key activities
+
+**If teacher wants to review worksheet:**
+- Read and display the document structure
+- Show activity flow and assessment questions
+
+**If teacher requests changes:**
+
+For **minor changes** (typos, wording, adding a question):
+1. Edit the lesson design JSON (`04_lesson_final.json`)
+2. Regenerate materials (re-run Stage 5)
+3. Re-validate (Stage 6)
+4. Present updated materials
+
+For **major changes** (different activities, new objectives, restructuring):
+1. Return to appropriate stage:
+   - Stage 1: Change competency or grade level
+   - Stage 2/2b: Change skills/knowledge breakdown
+   - Stage 3: Change activities or lesson type
+2. Progress through subsequent stages again
+
+**If teacher approves materials:**
+```
+Great! Your lesson is ready to teach.
+
+Session ID: {session_id}
+Files location: .lesson-designer/sessions/{session_id}/
+
+TIP: The hidden first slide in your PowerPoint has your complete lesson plan.
+Open the presentation in Normal view and check the first slide for:
+- Objective
+- Agenda with timing
+- Anticipated misconceptions
+- Delivery tips
+
+Good luck with your lesson!
+```
+
+**Outputs:**
+- Teacher-facing summary of completed materials
+- Clear file locations
+- Options for next steps
+
+**Next:** Session complete (or return to earlier stage if changes requested)
+
+---
+
+## Complete Workflow Checklist
+
+Use this checklist to track progress through a lesson design session:
+
+```
+COMPLETE LESSON DESIGN WORKFLOW
+================================
+
+Session ID: ________________
+
+STAGE 1: Gather competency requirements
+  [ ] Asked 5 input questions (competency, grade, lesson count, duration, constraints)
+  [ ] Validated competency is skill-focused (not topic-focused)
+  [ ] Created session directory
+      Output: 01_input.json
+
+STAGE 2: Decompose into skills and knowledge
+  [ ] Identified skill verb and object
+  [ ] Listed required knowledge items
+  [ ] Teacher reviewed and approved decomposition
+      Output: 02_competency_breakdown.json (partial)
+
+STAGE 2b: Teacher classification and proficiency targets
+  [ ] Teacher classified each knowledge item (needs_teaching / already_assumed)
+  [ ] Teacher selected target proficiency level
+      Output: Updated 02_competency_breakdown.json
+
+STAGE 3: Design lesson with Marzano taxonomy
+  [ ] Determined lesson type
+  [ ] Designed activities with Marzano levels
+  [ ] Included hidden slide content
+  [ ] Added vocabulary and assessment
+      Output: 03_lesson_design_v1.json
+
+STAGE 3b: Validate cognitive rigor
+  [ ] Ran validate_marzano.py script
+  [ ] Verified 40%+ higher-order thinking
+  [ ] Addressed any errors (max 3 attempts)
+  [ ] Saved final validated design
+      Output: Validation passed -> 04_lesson_final.json
+
+STAGE 5: Generate materials
+  [ ] Generated PowerPoint slide deck
+      Output: 05_slides.pptx
+  [ ] Generated Word document
+      Output: 06_worksheet.docx
+
+STAGE 6: Validate outputs
+  [ ] Ran validate_outputs.py script
+  [ ] Reviewed validation report
+  [ ] Addressed any errors
+      Output: 07_validation_report.txt
+
+STAGE 7: Present to teacher
+  [ ] Summarized what was created
+  [ ] Provided file locations
+  [ ] Offered next steps
+      Output: Summary and file locations
+
+SESSION COMPLETE!
+
+Session files location: .lesson-designer/sessions/{session_id}/
+  - 01_input.json
+  - 02_competency_breakdown.json
+  - 03_lesson_design_v1.json (and v2, v3 if iterations)
+  - 04_lesson_final.json
+  - 05_slides.pptx
+  - 06_worksheet.docx
+  - 07_validation_report.txt
+```
+
+**Quick Reference - Script Commands:**
+
+```bash
+# Stage 3b: Validate cognitive rigor
+python .claude/skills/lesson-designer/scripts/validate_marzano.py \
+  .lesson-designer/sessions/{session_id}/03_lesson_design_v1.json
+
+# Stage 5: Generate slides
+python .claude/skills/lesson-designer/scripts/generate_slides.py \
+  .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+  .claude/skills/lesson-designer/templates/slide_deck.pptx \
+  .lesson-designer/sessions/{session_id}/05_slides.pptx
+
+# Stage 5: Generate worksheet
+python .claude/skills/lesson-designer/scripts/generate_worksheet.py \
+  .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+  .claude/skills/lesson-designer/templates/student_worksheet.docx \
+  .lesson-designer/sessions/{session_id}/06_worksheet.docx
+
+# Stage 6: Validate outputs
+python .claude/skills/lesson-designer/scripts/validate_outputs.py \
+  .lesson-designer/sessions/{session_id}/
+```
 
 ---
 
@@ -987,6 +1266,6 @@ The lesson includes 45% higher-order thinking activities...
 
 ---
 
-**Version:** 1.1.0
+**Version:** 1.2.0
 **Last updated:** 2026-01-25
 **Framework:** [Marzano's New Taxonomy](./MARZANO.md)
