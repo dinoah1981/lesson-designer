@@ -59,11 +59,14 @@ Plans:
   4. Tool can generate dedicated assessment lessons including quizzes, tests, graded Socratic discussions with guides, and performance tasks with rubrics
   5. All material types (worksheets, readings, problem sets, simulations, activity descriptions) are properly formatted for their purpose
 
-**Plans**: TBD
+**Plans**: 5 plans in 2 waves
 
 Plans:
-- [ ] 02-01: TBD during phase planning
-- [ ] 02-02: TBD during phase planning
+- [ ] 02-01-PLAN.md — Worksheet double-spacing and writing space configuration
+- [ ] 02-02-PLAN.md — Discussion slide structure with time allocations and facilitation notes
+- [ ] 02-03-PLAN.md — HTML/JS simulation generator with p5.js
+- [ ] 02-04-PLAN.md — Assessment generator for quizzes, tests, Socratic guides, and performance tasks
+- [ ] 02-05-PLAN.md — Validation updates and integration checkpoint
 
 ### Phase 3: Single Persona Feedback
 **Goal**: Lesson designs are validated through struggling learner persona before finalization, with teacher-approved revisions.
@@ -133,12 +136,12 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Core Lesson Generation | 0/6 | Planned | - |
-| 2. Material Quality & Formatting | 0/TBD | Not started | - |
+| 1. Core Lesson Generation | 6/6 | Complete | 2026-01-25 |
+| 2. Material Quality & Formatting | 0/5 | Planned | - |
 | 3. Single Persona Feedback | 0/TBD | Not started | - |
 | 4. Multi-Persona Validation | 0/TBD | Not started | - |
 | 5. Multi-Lesson Sequences | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2025-01-25*
-*Last updated: 2026-01-25 — Phase 1 planned (6 plans in 4 waves)*
+*Last updated: 2026-01-25 — Phase 2 planned (5 plans in 2 waves)*
