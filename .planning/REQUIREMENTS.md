@@ -108,43 +108,47 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| COMP-01 | TBD | Pending |
-| COMP-02 | TBD | Pending |
-| COMP-03 | TBD | Pending |
-| COMP-04 | TBD | Pending |
-| COMP-05 | TBD | Pending |
-| MARZ-01 | TBD | Pending |
-| MARZ-02 | TBD | Pending |
-| MARZ-03 | TBD | Pending |
-| PERS-01 | TBD | Pending |
-| PERS-02 | TBD | Pending |
-| PERS-03 | TBD | Pending |
-| PERS-04 | TBD | Pending |
-| SLID-01 | TBD | Pending |
-| SLID-02 | TBD | Pending |
-| SLID-03 | TBD | Pending |
-| SLID-04 | TBD | Pending |
-| MATL-01 | TBD | Pending |
-| MATL-02 | TBD | Pending |
-| MATL-03 | TBD | Pending |
-| MATL-04 | TBD | Pending |
-| DISC-01 | TBD | Pending |
-| DISC-02 | TBD | Pending |
-| DISC-03 | TBD | Pending |
-| ASMT-01 | TBD | Pending |
-| ASMT-02 | TBD | Pending |
-| ASMT-03 | TBD | Pending |
-| ASMT-04 | TBD | Pending |
-| SEQN-01 | TBD | Pending |
-| SEQN-02 | TBD | Pending |
-| SEQN-03 | TBD | Pending |
-| SEQN-04 | TBD | Pending |
+| COMP-01 | Phase 1 | Pending |
+| COMP-02 | Phase 1 | Pending |
+| COMP-03 | Phase 1 | Pending |
+| COMP-04 | Phase 1 | Pending |
+| COMP-05 | Phase 1 | Pending |
+| MARZ-01 | Phase 1 | Pending |
+| MARZ-02 | Phase 1 | Pending |
+| MARZ-03 | Phase 1 | Pending |
+| PERS-01 | Phase 3, Phase 4 | Pending |
+| PERS-02 | Phase 3 | Pending |
+| PERS-03 | Phase 3 | Pending |
+| PERS-04 | Phase 3 | Pending |
+| SLID-01 | Phase 1 | Pending |
+| SLID-02 | Phase 1 | Pending |
+| SLID-03 | Phase 1 | Pending |
+| SLID-04 | Phase 1 | Pending |
+| MATL-01 | Phase 1 | Pending |
+| MATL-02 | Phase 2 | Pending |
+| MATL-03 | Phase 1 | Pending |
+| MATL-04 | Phase 2 | Pending |
+| DISC-01 | Phase 2 | Pending |
+| DISC-02 | Phase 2 | Pending |
+| DISC-03 | Phase 2 | Pending |
+| ASMT-01 | Phase 1 | Pending |
+| ASMT-02 | Phase 2 | Pending |
+| ASMT-03 | Phase 2 | Pending |
+| ASMT-04 | Phase 2 | Pending |
+| SEQN-01 | Phase 5 | Pending |
+| SEQN-02 | Phase 5 | Pending |
+| SEQN-03 | Phase 5 | Pending |
+| SEQN-04 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 31 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 31
+- Mapped to phases: 31 (100% coverage)
+- Unmapped: 0
+
+**Notes:**
+- PERS-01 is partially implemented in Phase 3 (1 persona) and completed in Phase 4 (all 4 personas)
+- All other requirements map to exactly one phase
 
 ---
 *Requirements defined: 2025-01-25*
-*Last updated: 2025-01-25 after initial definition*
+*Last updated: 2025-01-25 after roadmap creation*
