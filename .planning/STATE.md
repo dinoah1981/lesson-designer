@@ -11,27 +11,27 @@ See: .planning/PROJECT.md (updated 2025-01-25)
 ## Current Position
 
 Phase: 1 of 5 (Core Lesson Generation)
-Plan: 2 of 6 complete
+Plan: 3 of 6 complete
 Status: In progress
-Last activity: 2026-01-25 — Completed 01-02-PLAN.md (Teacher input and competency decomposition)
+Last activity: 2026-01-25 — Completed 01-03-PLAN.md (Marzano-based lesson design and validation)
 
-Progress: [██░░░░░░░░] 20%
+Progress: [███░░░░░░░] 30%
 
 ## Performance Metrics
 
 **Velocity:**
-- Total plans completed: 2
+- Total plans completed: 3
 - Average duration: 7 min
-- Total execution time: 14 minutes
+- Total execution time: 22 minutes
 
 **By Phase:**
 
 | Phase | Plans | Total | Avg/Plan |
 |-------|-------|-------|----------|
-| 01-core-lesson-generation | 2 | 14min | 7min |
+| 01-core-lesson-generation | 3 | 22min | 7min |
 
 **Recent Trend:**
-- Last 5 plans: 01-01 (8min), 01-02 (6min)
+- Last 5 plans: 01-01 (8min), 01-02 (6min), 01-03 (8min)
 - Trend: Stable velocity
 
 *Updated after each plan completion*
@@ -50,6 +50,9 @@ Recent decisions affecting current work:
 - **Stage 2b positioning (01-02):** Knowledge classification happens between decomposition and lesson design because teacher input about what needs teaching directly affects activity design
 - **Binary knowledge classification (01-02):** Simple needs_teaching/already_assumed options instead of a scale - teachers need clear instructional decisions
 - **UUID session IDs (01-02):** UUID v4 for session identification ensures uniqueness and avoids timestamp parsing issues
+- **Lesson type distributions (01-03):** Each lesson type has recommended Marzano level distribution (e.g., novel_application: 50% knowledge_utilization)
+- **Validation exit codes (01-03):** Exit 0=pass, 1=warnings, 2=fail/block - controls workflow progression
+- **Maximum 3 validation attempts (01-03):** After 3 failures, escalate to teacher for guidance
 
 ### Pending Todos
 
@@ -61,6 +64,7 @@ None yet.
 - ✓ Library availability: Verified python-pptx, python-docx, and docxtpl are available (installed in 01-01)
 - ✓ Marzano framework reference: Created MARZANO.md (610 lines) - well within token limits
 - ✓ Teacher input workflow: Stages 1, 2, 2b complete with session management
+- ✓ Lesson design workflow: Stage 3 and 3b complete with validation script
 
 **Phase 5 readiness:**
 - Context management: Multi-lesson sequences require empirical testing of context compression strategies (flagged in research)
@@ -69,8 +73,8 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-01-25 (Phase 1 Plan 02 execution)
-Stopped at: Completed 01-02-PLAN.md - Teacher input and competency decomposition with session management
+Last session: 2026-01-25 (Phase 1 Plan 03 execution)
+Stopped at: Completed 01-03-PLAN.md - Marzano-based lesson design and validation
 Resume file: None
 
 ---
