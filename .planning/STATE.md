@@ -11,8 +11,8 @@ See: .planning/PROJECT.md (updated 2025-01-25)
 ## Current Position
 
 Phase: 2 of 5 (Material Quality & Formatting)
-Plan: 4 of 4 complete
-Status: Phase complete
+Plan: 4 of 5 complete
+Status: In progress
 Last activity: 2026-01-25 — Created dedicated assessment generator for quizzes, tests, performance tasks, and Socratic discussions
 
 Progress: [████████░░] 80%
@@ -64,13 +64,16 @@ Recent decisions affecting current work:
 - **E2E test fixture (01-06):** Sample lesson at 70% higher-order thinking provides margin above 40% minimum
 - **Float multiplier line spacing (02-01):** Use 2.0 multiplier instead of fixed Pt for proportional scaling with font size changes
 - **Cognitive complexity-based spacing (02-01):** Answer space scales with Marzano level (2-6 lines) to match thinking demands
+- **Discussion facilitation notes (02-02):** TIME ALLOCATION, WATCH FOR, and PROMPTS TO USE sections in slide notes for teacher guidance
+- **p5.js CDN for simulations (02-03):** Self-contained HTML files with p5.js loaded from CDN for zero-install student deployment
+- **Keyword-based simulation detection (02-03):** Predictable simulation type selection based on competency keywords (not LLM classification)
 - **4-level rubric structure (02-04):** Advanced/Proficient/Developing/Beginning (4/3/2/1 points) aligns with common educational standards
 - **Auto-generate answer keys (02-04):** Quiz/test answer keys generated automatically alongside student version to save teacher time
 - **Default Socratic criteria (02-04):** Participation, Evidence Use, Engagement with Others - research-backed criteria when not specified
 
 ### Pending Todos
 
-None - Phase 2 complete
+Phase 2 Plan 02-05 remaining
 
 ### Blockers/Concerns
 
@@ -86,12 +89,12 @@ None - Phase 2 complete
 - ✓ Integration testing: test_e2e.py exercises complete workflow (01-06)
 - ✓ Human verification: Slides approved after v4 with professional design system
 
-**Phase 2 complete:**
+**Phase 2 in progress (4 of 5 plans complete):**
 - ✓ Worksheet formatting enhanced (02-01): double-spacing and cognitive complexity-based answer space
 - ✓ Discussion facilitation notes added (02-02): timing, teacher prompts, discussion protocol
 - ✓ Simulation generator created (02-03): HTML/JS interactive simulations for experiential learning
 - ✓ Assessment generator created (02-04): quizzes, tests, performance tasks, Socratic discussions with rubrics
-- All material quality and formatting requirements satisfied
+- Next: Plan 02-05 (remaining material quality enhancement)
 - Validation infrastructure established and can be extended
 - File generation patterns proven with PowerPoint, Word, HTML
 - Lesson design schema is stable
@@ -102,9 +105,9 @@ None - Phase 2 complete
 ## Session Continuity
 
 Last session: 2026-01-25 (Phase 2 Plan 04 execution)
-Stopped at: Completed 02-04-PLAN.md - Created assessment generator (Tasks 1-2 complete)
+Stopped at: Completed 02-04-PLAN.md - Assessment generator for quizzes, tests, performance tasks, and Socratic discussions (Tasks 1-2 complete)
 Resume file: None
-Next action: Phase 2 complete - ready for Phase 3 (single persona feedback) or await direction
+Next action: Continue Phase 2 with Plan 02-05 or await direction
 
 ---
 *State initialized: 2025-01-25*
