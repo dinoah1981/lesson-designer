@@ -712,9 +712,97 @@ RESULT: PASSED WITH WARNINGS
 
 **Purpose:** Create classroom-ready files from lesson plan.
 
-**Process:** (To be implemented in Phase 1, Plan 04-06)
+**Inputs:** Validated lesson design from Stage 3b (`04_lesson_final.json`)
 
-**Outputs:** slide_deck.pptx and student_worksheet.docx
+**Process:**
+
+#### Part 1: Generate PowerPoint Slides (Plan 04)
+
+Generate teacher slide deck with hidden lesson plan and sparse content:
+
+```bash
+python .claude/skills/lesson-designer/scripts/generate_slides.py \
+  .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+  .claude/skills/lesson-designer/templates/slide_deck.pptx \
+  .lesson-designer/sessions/{session_id}/05_slides.pptx
+```
+
+*(See Plan 04 for slide generation details)*
+
+#### Part 2: Generate Student Materials (Word Document)
+
+Generate student worksheet/materials based on lesson type:
+
+```bash
+python .claude/skills/lesson-designer/scripts/generate_worksheet.py \
+  .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+  .claude/skills/lesson-designer/templates/student_worksheet.docx \
+  .lesson-designer/sessions/{session_id}/06_worksheet.docx
+```
+
+**Material Type Selection:**
+
+The tool automatically selects the appropriate material format based on lesson type:
+
+| Lesson Type        | Material Format  | Purpose                    |
+|--------------------|------------------|----------------------------|
+| Introducing        | Worksheet        | Reading + comprehension    |
+| Practicing         | Problem Set      | Practice exercises         |
+| Applying           | Worksheet        | Structured application     |
+| Synthesizing       | Activity Guide   | Project instructions       |
+| Novel Application  | Problem Set      | Challenge problems         |
+
+This ensures students get materials that match the lesson's purpose.
+
+**Assessment Integration (Requirement ASMT-01):**
+
+EVERY lesson includes assessment of its objective. Assessment appears as one of:
+
+- **Exit Ticket:** 2-3 questions at the end of the worksheet
+- **Embedded Questions:** Assessment integrated throughout activities
+- **Performance Task:** Clear success criteria for demonstration
+
+The assessment tells teachers whether students achieved the learning objective.
+
+**Template System:**
+
+Student materials use Jinja2 templating via docxtpl:
+
+```
+{{ title }}              -> Lesson title
+{{ grade_level }}        -> Grade level
+{% for activity in activities %}
+  {{ activity.name }}    -> Activity name
+  {{ activity.duration }} -> Duration in minutes
+{% endfor %}
+{{ exit_ticket.questions }} -> Assessment questions
+```
+
+This allows teachers to customize the template (fonts, branding, layout) without touching the generation code.
+
+**Error Handling:**
+
+If document generation fails:
+1. Check that lesson design JSON is valid (`04_lesson_final.json` exists)
+2. Check that template file exists at expected path
+3. Check for unrendered Jinja2 tags (indicates template syntax error)
+4. Review error message for specific issue
+
+**Phase 1 Formatting Note:**
+
+> NOTE: Phase 1 generates basic 1.5-spaced documents. Phase 2 will add:
+> - Double-spaced answer lines (proper room for writing)
+> - Discussion timing and structure
+> - Enhanced formatting for different material types
+
+**Outputs:**
+- `05_slides.pptx` - PowerPoint presentation for teacher
+- `06_worksheet.docx` - Student materials matching lesson type
+
+**Requirements Covered:**
+- MATL-01: Generate actual .docx Word documents
+- MATL-03: Material type matches lesson type
+- ASMT-01: Each lesson includes assessment of its objective
 
 **Next:** Stage 6
 
@@ -722,13 +810,58 @@ RESULT: PASSED WITH WARNINGS
 
 ### Stage 6: Validate Outputs
 
-**Purpose:** Verify generated files meet quality requirements.
+**Purpose:** Verify generated files meet quality requirements before presenting to teacher.
 
-**Process:** (To be implemented in Phase 2)
+**Inputs:** Generated files from Stage 5
 
-**Outputs:** Validation report
+**Process:**
 
-**Next:** Stage 7
+Run the validation script on the session directory:
+
+```bash
+python .claude/skills/lesson-designer/scripts/validate_outputs.py \
+  .lesson-designer/sessions/{session_id}
+```
+
+**Validation Checks:**
+
+**PowerPoint (.pptx):**
+- File exists and can be opened
+- Has minimum number of slides (at least 3)
+- Has hidden lesson plan slide (SLID-02)
+- Font sizes meet 16pt minimum (SLID-04)
+
+**Word Document (.docx):**
+- File exists and can be opened
+- No unrendered Jinja2 template tags
+- Has required sections (objectives, activities)
+- Has assessment section (ASMT-01)
+- Has minimum paragraph count
+
+**Interpreting Results:**
+
+```
+Exit code 0: PASSED - Proceed to Stage 7
+Exit code 1: PASSED WITH WARNINGS - Can proceed, review warnings
+Exit code 2: FAILED - Review errors, regenerate materials
+```
+
+**If Validation Fails:**
+
+1. Check the validation report at `07_validation_report.txt`
+2. Address specific errors (usually template rendering issues)
+3. Re-run Stage 5 to regenerate materials
+4. Re-run validation
+
+**Outputs:**
+- `07_validation_report.txt` - Detailed validation results
+- Validation pass/fail status
+
+**Next:** Stage 7 (if passed) or Stage 5 (if failed)
+
+---
+
+### Stage 7: Present to Teacher
 
 ---
 
@@ -771,6 +904,6 @@ The lesson includes 45% higher-order thinking activities...
 
 ---
 
-**Version:** 1.0.0
+**Version:** 1.1.0
 **Last updated:** 2026-01-25
 **Framework:** [Marzano's New Taxonomy](./MARZANO.md)
