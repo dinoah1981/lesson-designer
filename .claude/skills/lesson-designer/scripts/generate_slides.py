@@ -40,6 +40,22 @@ DISCUSSION_STRUCTURE = {
     'closing': 3       # Synthesis, exit question
 }
 
+# Facilitation guidance templates
+FACILITATION_PROMPTS = [
+    "Can you build on what [student] said?",
+    "Who has a different perspective?",
+    "What evidence supports that claim?",
+    "How does this connect to what we learned earlier?",
+    "Can you give a specific example?"
+]
+
+DISCUSSION_WATCH_FOR = [
+    "Students dominating airtime - redirect with 'Let's hear from someone new'",
+    "Off-task conversations - physical proximity or refocus question",
+    "Quiet students - invite with 'What do you think, [name]?'",
+    "Surface-level responses - push with 'Tell me more about that'"
+]
+
 
 def is_discussion_activity(activity: dict) -> bool:
     """Detect if activity is a discussion based on name or type."""
@@ -371,16 +387,34 @@ def create_discussion_slide(prs, slide, activity):
     run2.text = closing[:100] if len(str(closing)) > 100 else str(closing)
     run2.font.size = Pt(16)
 
-    # Add facilitation notes (next task will enhance these)
+    # Full facilitation notes
     notes_slide = slide.notes_slide
     notes_tf = notes_slide.notes_text_frame
-    notes_tf.text = f"DISCUSSION: {activity['name']}\n"
-    notes_tf.text += f"Total time: {duration} minutes\n\n"
-    notes_tf.text += f"TIME BREAKDOWN:\n"
-    notes_tf.text += f"  • Opening: {opening_time} min\n"
-    notes_tf.text += f"  • Pair work: {pair_time} min\n"
-    notes_tf.text += f"  • Group share: {share_time} min\n"
-    notes_tf.text += f"  • Closing: {closing_time} min\n"
+    notes_tf.text = f"""FACILITATION GUIDE: {activity['name']}
+
+TIME ALLOCATION ({duration} min total):
+  • Opening: {opening_time} min
+  • Pair discussion: {pair_time} min
+  • Whole group share: {share_time} min
+  • Closing: {closing_time} min
+
+FACILITATION MOVES:
+  • During pair work: Circulate, listen, note interesting ideas to highlight
+  • During share: Track who speaks, balance airtime across students
+  • Productive struggle: Let silence sit for 3-5 seconds before intervening
+
+PROMPTS TO USE:
+"""
+    for prompt in FACILITATION_PROMPTS[:4]:
+        notes_tf.text += f"  • '{prompt}'\n"
+
+    notes_tf.text += "\nWATCH FOR:\n"
+    for warning in DISCUSSION_WATCH_FOR[:3]:
+        notes_tf.text += f"  ⚠️ {warning}\n"
+
+    # Add activity-specific notes if provided
+    if activity.get('assessment_method'):
+        notes_tf.text += f"\nASSESSMENT: {activity['assessment_method']}\n"
 
 
 def create_activity_slide(prs, slide, activity):
