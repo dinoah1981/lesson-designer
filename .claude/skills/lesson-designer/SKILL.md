@@ -1,7 +1,7 @@
 ---
 name: lesson-designer
 description: Designs classroom-ready lessons using Marzano's New Taxonomy framework, producing slide decks and student worksheets with cognitive rigor validation
-version: 1.0.0
+version: 2.0.0
 author: Claude
 ---
 
@@ -19,6 +19,8 @@ Execute these stages sequentially:
 - [ ] **Stage 3: Design lesson with Marzano taxonomy**
 - [ ] **Stage 3b: Validate cognitive rigor**
 - [ ] **Stage 5: Generate materials (.pptx + .docx)**
+- [ ] **Stage 5b: Generate simulation (optional)**
+- [ ] **Stage 5c: Generate assessment (optional)**
 - [ ] **Stage 6: Validate outputs**
 - [ ] **Stage 7: Present to teacher**
 
@@ -893,12 +895,12 @@ If document generation fails:
 3. Check for unrendered Jinja2 tags (indicates template syntax error)
 4. Review error message for specific issue
 
-**Phase 1 Formatting Note:**
+**Phase 2 Formatting Features:**
 
-> NOTE: Phase 1 generates basic 1.5-spaced documents. Phase 2 will add:
-> - Double-spaced answer lines (proper room for writing)
-> - Discussion timing and structure
-> - Enhanced formatting for different material types
+Worksheets now include:
+- **Double-spaced answer lines:** Answer lines with underscores use 2.0 line spacing multiplier for adequate writing room
+- **Cognitive complexity-based spacing:** Answer space scales with Marzano level (2-6 lines based on thinking demands)
+- **Discussion facilitation notes:** Discussion slides include TIME ALLOCATION, WATCH FOR, and PROMPTS TO USE sections
 
 **Outputs:**
 - `05_slides.pptx` - PowerPoint presentation for teacher
@@ -908,6 +910,105 @@ If document generation fails:
 - MATL-01: Generate actual .docx Word documents
 - MATL-03: Material type matches lesson type
 - ASMT-01: Each lesson includes assessment of its objective
+
+**Next:** Stage 5b (optional simulation) or Stage 5c (optional assessment) or Stage 6
+
+---
+
+### Stage 5b: Generate Simulation (Optional)
+
+**Purpose:** Create interactive HTML/JavaScript simulations for experiential learning activities.
+
+**When to use:** When lesson includes activities requiring visualization, interaction, or experimentation (e.g., physics simulations, data visualizations, interactive models).
+
+**Process:**
+
+Generate simulation using the generate_simulation.py script:
+
+```bash
+python .claude/skills/lesson-designer/scripts/generate_simulation.py \
+  --competency "Students will analyze projectile motion" \
+  --simulation-type "physics" \
+  --output "projectile_simulation.html"
+```
+
+**Simulation Types:**
+
+| Type | Best For | Example |
+|------|----------|---------|
+| `physics` | Forces, motion, waves | Projectile motion, pendulum |
+| `data` | Charts, graphs, statistics | Interactive scatter plots |
+| `geometry` | Shapes, transformations | Angle exploration |
+| `ecosystem` | Biology, populations | Predator-prey dynamics |
+| `chemistry` | Molecules, reactions | pH simulation |
+
+**Simulation type selection:** Keyword-based detection from competency:
+- "force", "motion", "velocity" → physics
+- "data", "graph", "chart" → data
+- "shape", "angle", "triangle" → geometry
+- "population", "species", "ecosystem" → ecosystem
+- "molecule", "reaction", "pH" → chemistry
+
+**Output format:** Self-contained HTML file with p5.js loaded from CDN (zero-install deployment for students).
+
+**Features:**
+- Interactive controls (sliders, buttons)
+- Real-time visualization
+- Reset functionality
+- Educational annotations
+
+**Next:** Stage 5c (optional assessment) or Stage 6
+
+---
+
+### Stage 5c: Generate Assessment (Optional)
+
+**Purpose:** Create dedicated assessment materials beyond embedded exit tickets.
+
+**When to use:** When you need formal quizzes, tests, performance tasks, or Socratic discussion guides.
+
+**Process:**
+
+Generate assessment using the generate_assessment.py script:
+
+```bash
+python .claude/skills/lesson-designer/scripts/generate_assessment.py \
+  --lesson-file ".lesson-designer/sessions/{session_id}/04_lesson_final.json" \
+  --assessment-type "quiz" \
+  --output ".lesson-designer/sessions/{session_id}/quiz.docx"
+```
+
+**Assessment Types:**
+
+| Type | Purpose | Output Files | Features |
+|------|---------|--------------|----------|
+| `quiz` | Quick formative check (5-10 min) | Student version + Answer key | Multiple choice, short answer, auto-generated keys |
+| `test` | Comprehensive summative (30-45 min) | Student version + Answer key | Mix of question types, detailed rubric |
+| `performance` | Skill demonstration | Task description + Rubric | 4-level rubric (Advanced/Proficient/Developing/Beginning) |
+| `socratic` | Discussion-based assessment | Discussion guide + Participation rubric | Questions, prompts, discussion protocol, default criteria |
+
+**Quiz/Test Features:**
+- Mix of retrieval, comprehension, analysis questions
+- Answer keys auto-generated alongside student version
+- Clear point values
+- Space for student responses
+
+**Performance Task Features:**
+- Scenario or problem statement
+- Clear success criteria
+- 4-level rubric (4/3/2/1 points per criterion)
+- Materials list
+
+**Socratic Discussion Features:**
+- Central question(s) aligned to objective
+- Follow-up prompts
+- Discussion protocol (timing, roles)
+- Participation rubric with default criteria:
+  - Participation (contribution frequency/quality)
+  - Evidence Use (supports claims with evidence)
+  - Engagement with Others (builds on peer ideas)
+
+**Default rubric structure:** Advanced (4 pts) / Proficient (3 pts) / Developing (2 pts) / Beginning (1 pt)
 
 **Next:** Stage 6
 
@@ -1246,12 +1347,24 @@ python .claude/skills/lesson-designer/scripts/validate_marzano.py \
 # Claude generates slides directly using python-pptx (see design principles above)
 # No script required - Claude writes and executes the code
 
-# Stage 5: Generate worksheet
+# Stage 5 Part 2: Generate worksheet
 python .claude/skills/lesson-designer/scripts/generate_worksheet.py \
   .lesson-designer/sessions/{session_id}/04_lesson_final.json \
   .lesson-designer/sessions/{session_id}/06_worksheet.docx
 
-# Stage 6: Validate outputs
+# Stage 5b: Generate simulation (optional)
+python .claude/skills/lesson-designer/scripts/generate_simulation.py \
+  --competency "Students will analyze..." \
+  --simulation-type "physics" \
+  --output "simulation.html"
+
+# Stage 5c: Generate assessment (optional)
+python .claude/skills/lesson-designer/scripts/generate_assessment.py \
+  --lesson-file .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+  --assessment-type "quiz" \
+  --output .lesson-designer/sessions/{session_id}/quiz.docx
+
+# Stage 6: Validate outputs (now includes Phase 2 checks)
 python .claude/skills/lesson-designer/scripts/validate_outputs.py \
   .lesson-designer/sessions/{session_id}/
 ```
@@ -1281,6 +1394,6 @@ The lesson includes 45% higher-order thinking activities...
 
 ---
 
-**Version:** 1.3.0
+**Version:** 2.0.0
 **Last updated:** 2026-01-25
 **Framework:** [Marzano's New Taxonomy](./MARZANO.md)
