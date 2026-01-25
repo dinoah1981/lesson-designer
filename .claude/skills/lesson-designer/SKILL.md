@@ -56,17 +56,136 @@ Base templates for material generation:
 
 ### Stage 1: Gather Competency Requirements
 
-**Purpose:** Understand what students need to learn.
+**Purpose:** Collect all information needed to design a competency-focused lesson.
 
-**Inputs:** Teacher provides grade level, subject, competency/standard, lesson duration
+> **Scope Note:** This tool designs lessons for one competency at a time. Multi-lesson sequences across different competencies are planned for a future update.
 
 **Process:**
-1. Ask clarifying questions about context
-2. Identify prerequisite knowledge
-3. Determine lesson scope boundaries
-4. Record in state.json
 
-**Outputs:** Structured competency requirements
+1. **Ask the teacher these 5 questions:**
+
+   ```
+   1. What competency do you want students to master?
+      (The skill they will demonstrate - state it as what students will DO)
+
+   2. What grade level are the students?
+      (e.g., "7th grade", "AP", "College freshman")
+
+   3. How many lessons do you want to dedicate to this competency?
+      (default: 1 if not specified)
+
+   4. How long is each lesson period?
+      (e.g., 50 min, 60 min, 90 min)
+
+   5. Are there any constraints I should know about?
+      (available materials, time of year, student background, etc.)
+   ```
+
+2. **Validate the competency statement:**
+
+   Competencies must be **skill-focused** (what students will DO), not **topic-focused** (what they will learn about).
+
+   **Good examples (skill-focused):**
+   - "Students will analyze primary sources to evaluate historical claims"
+   - "Students will apply the quadratic formula to solve real-world problems"
+   - "Students will construct arguments using evidence from multiple texts"
+
+   **Bad examples (topic-focused) - help teacher reframe:**
+   - "The Civil War" → Ask: "What skill do you want students to demonstrate with Civil War content?"
+   - "Photosynthesis" → Ask: "What should students be able to DO with their knowledge of photosynthesis?"
+   - "Fractions" → Ask: "What fraction operations should students master?"
+
+   **Reframing prompt when needed:**
+   > "I see you've given me a topic. To create the best lesson, I need to know what skill students should demonstrate. For example, with [topic], should they be able to [analyze/compare/create/evaluate/apply] something specific?"
+
+3. **Create session directory:**
+
+   ```python
+   import sys
+   sys.path.insert(0, '.claude/skills/lesson-designer/scripts')
+   from parse_competency import generate_session_id, create_session_directory, save_input
+
+   session_id = generate_session_id()
+   create_session_directory(session_id)
+   ```
+
+4. **Save input to `01_input.json`:**
+
+   ```python
+   input_data = {
+       "session_id": session_id,
+       "competency": "Students will analyze primary sources to evaluate historical claims",
+       "grade_level": "8th grade",
+       "lesson_count": 2,
+       "lesson_duration": 55,
+       "constraints": "Students have limited access to technology; need paper-based activities"
+   }
+   save_input(session_id, input_data)
+   ```
+
+**Input JSON Schema (`01_input.json`):**
+
+```json
+{
+  "session_id": "string (UUID)",
+  "competency": "string (skill statement - what students will DO)",
+  "grade_level": "string (e.g., '7th grade', 'AP', 'College')",
+  "lesson_count": "integer (1 or more, default 1)",
+  "lesson_duration": "integer (minutes per lesson period)",
+  "constraints": "string or null (any limiting factors)",
+  "created_at": "string (ISO 8601 timestamp)"
+}
+```
+
+**Example Conversation:**
+
+```
+Teacher: I want to teach about the Civil War for my 8th graders.
+
+Claude: Great topic! To create the best lesson, I need to know what skill
+students should demonstrate. With the Civil War, should they be able to:
+- Analyze primary sources from the era?
+- Compare perspectives of different groups?
+- Evaluate the causes and effects?
+- Something else?
+
+Teacher: I want them to analyze primary sources to understand different
+perspectives on the war.
+
+Claude: Perfect. So the competency is: "Students will analyze primary sources
+to identify and compare different perspectives on the Civil War."
+
+Let me gather a few more details:
+- How many lessons do you want to dedicate to this? (I'll design for 1 unless you say more)
+- How long is each class period?
+- Any constraints I should know about - available materials, what they already know, etc.?
+
+Teacher: Let's do 2 lessons, 55 minutes each. They have access to Chromebooks
+but the school has a limited printing budget.
+
+Claude: Got it! Here's what I have:
+
+- **Competency:** Students will analyze primary sources to identify and compare
+  different perspectives on the Civil War
+- **Grade Level:** 8th grade
+- **Lessons:** 2 lessons at 55 minutes each
+- **Constraints:** Chromebook access available; limited printing budget
+
+Creating your lesson session now...
+
+[Creates session and saves 01_input.json]
+
+Moving to Stage 2: I'll now decompose this competency into the specific skills
+and knowledge students need...
+```
+
+**Outputs:**
+- Session directory created at `.lesson-designer/sessions/{session_id}/`
+- `01_input.json` saved with validated competency requirements
+
+**Requirements Covered:**
+- COMP-01: Single competency supported (series acknowledged as future)
+- COMP-02: Lesson count and duration captured
 
 **Next:** Stage 2
 
