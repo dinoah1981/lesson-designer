@@ -15,9 +15,9 @@ Execute these stages sequentially:
 
 - [ ] **Stage 1: Gather competency requirements**
 - [ ] **Stage 2: Decompose into skills and knowledge**
+- [ ] **Stage 2b: Teacher classification and proficiency targets**
 - [ ] **Stage 3: Design lesson with Marzano taxonomy**
 - [ ] **Stage 3b: Validate cognitive rigor**
-- [ ] **Stage 4: Teacher classification and proficiency targets**
 - [ ] **Stage 5: Generate materials (.pptx + .docx)**
 - [ ] **Stage 6: Validate outputs**
 - [ ] **Stage 7: Present to teacher**
@@ -320,6 +320,157 @@ and knowledge students need...
 
 ---
 
+### Stage 2b: Teacher Classification and Proficiency Targets
+
+**Purpose:** Have the teacher classify each knowledge item (needs teaching vs. already assumed) and set the target proficiency level for the skill.
+
+**Inputs:** Competency breakdown from Stage 2 (`02_competency_breakdown.json`)
+
+**Process:**
+
+1. **Load the competency breakdown:**
+
+   ```python
+   import sys
+   sys.path.insert(0, '.claude/skills/lesson-designer/scripts')
+   from parse_competency import load_breakdown, update_breakdown_with_classifications
+
+   breakdown = load_breakdown(session_id)
+   ```
+
+2. **Present each knowledge item and ask teacher to classify:**
+
+   ```
+   For each knowledge item, I need to know if students already know this
+   or if it needs to be taught in this lesson.
+
+   **K1: What primary sources are (definition, types)**
+   Classification? [needs teaching / already assumed]
+
+   **K2: How to identify bias in sources**
+   Classification? [needs teaching / already assumed]
+
+   **K3: What constitutes evidence vs. opinion**
+   Classification? [needs teaching / already assumed]
+
+   **K4: Historical context of the period being studied**
+   Classification? [needs teaching / already assumed]
+
+   **K5: How to cite sources properly**
+   Classification? [needs teaching / already assumed]
+   ```
+
+   **Classification meanings:**
+   - **needs_teaching** - Students don't know this yet; lesson will include direct instruction
+   - **already_assumed** - Students should already know this; lesson will include brief retrieval practice but not direct instruction
+
+3. **Explain the impact of classification:**
+
+   ```
+   For items marked "already assumed":
+   - I'll include a brief retrieval activity to activate prior knowledge
+   - But we won't spend time on direct instruction
+
+   For items marked "needs teaching":
+   - The lesson will include explicit instruction on this knowledge
+   - Students will get practice and feedback
+   ```
+
+4. **Ask about target proficiency level:**
+
+   ```
+   After this lesson/sequence, what proficiency level should students reach
+   with the skill "[skill statement]"?
+
+   - **Novice:** Can perform skill with significant support/scaffolding
+   - **Developing:** Can perform skill with some support
+   - **Proficient:** Can perform skill independently
+   - **Advanced:** Can perform skill and teach/extend it to new contexts
+
+   Note: For a single lesson on new content, "Developing" is often realistic.
+   For multi-lesson sequences or practice-focused lessons, "Proficient" may
+   be achievable.
+   ```
+
+5. **Update the competency breakdown with classifications:**
+
+   ```python
+   classifications = {
+       "K1": "needs_teaching",
+       "K2": "needs_teaching",
+       "K3": "already_assumed",
+       "K4": "needs_teaching",
+       "K5": "already_assumed"
+   }
+   target_proficiency = "developing"
+
+   update_breakdown_with_classifications(session_id, classifications, target_proficiency)
+   ```
+
+**Updated Breakdown JSON Schema (`02_competency_breakdown.json`):**
+
+After Stage 2b, the JSON includes classifications and proficiency target:
+
+```json
+{
+  "skill": {
+    "verb": "evaluate",
+    "object": "historical claims",
+    "full_statement": "Evaluate historical claims using primary source evidence"
+  },
+  "required_knowledge": [
+    {
+      "id": "K1",
+      "item": "What primary sources are (definition, types)",
+      "classification": "needs_teaching"
+    },
+    {
+      "id": "K2",
+      "item": "How to identify bias in sources",
+      "classification": "needs_teaching"
+    },
+    {
+      "id": "K3",
+      "item": "What constitutes evidence vs. opinion",
+      "classification": "already_assumed"
+    },
+    {
+      "id": "K4",
+      "item": "Historical context of the period being studied",
+      "classification": "needs_teaching"
+    },
+    {
+      "id": "K5",
+      "item": "How to cite sources properly",
+      "classification": "already_assumed"
+    }
+  ],
+  "target_proficiency": "developing"
+}
+```
+
+**Classification values:**
+- `"needs_teaching"` - Requires direct instruction in this lesson
+- `"already_assumed"` - Prior knowledge; retrieval practice only
+
+**Proficiency levels:**
+- `"novice"` - Performs with significant support
+- `"developing"` - Performs with some support
+- `"proficient"` - Performs independently
+- `"advanced"` - Performs and can extend/teach
+
+**Outputs:**
+- Updated `02_competency_breakdown.json` with classifications and target proficiency
+- Clear understanding of what needs instruction vs. activation
+
+**Requirements Covered:**
+- COMP-04: Classify knowledge items (needs teaching vs. already assumed)
+- COMP-05: Target proficiency level captured
+
+**Next:** Stage 3
+
+---
+
 ### Stage 3: Design Lesson with Marzano Taxonomy
 
 **Purpose:** Create complete lesson plan with activities mapped to Marzano levels, ensuring cognitive rigor across the lesson.
@@ -553,19 +704,7 @@ RESULT: PASSED WITH WARNINGS
 **Requirements Covered:**
 - MARZ-03: Cognitive rigor enforced with minimum 40% higher-order thinking
 
-**Next:** Stage 4 (if passed) or Stage 3 (if failed, up to 3 attempts)
-
----
-
-### Stage 4: Teacher Classification and Proficiency Targets
-
-**Purpose:** Adapt lesson for teacher's experience and set proficiency targets.
-
-**Process:** (To be implemented in Phase 1, Plan 03)
-
-**Outputs:** Teacher-adapted lesson with proficiency targets
-
-**Next:** Stage 5
+**Next:** Stage 5 (if passed) or Stage 3 (if failed, up to 3 attempts)
 
 ---
 
