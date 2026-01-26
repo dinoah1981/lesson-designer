@@ -1,0 +1,85 @@
+{
+  "title": "Analyzing Primary Sources: Civil War Era",
+  "grade_level": "8th grade",
+  "duration": 50,
+  "lesson_type": "introducing",
+  "objective": "Students will analyze primary sources to evaluate historical claims",
+  "vocabulary": [
+    {
+      "word": "bias",
+      "definition": null
+    },
+    {
+      "word": "reliability",
+      "definition": null
+    },
+    {
+      "word": "primary source",
+      "definition": "An original document from the time period"
+    },
+    {
+      "word": "perspective",
+      "definition": null
+    }
+  ],
+  "activities": [
+    {
+      "name": "Vocabulary Introduction",
+      "duration": 5,
+      "marzano_level": "retrieval",
+      "instructions": [
+        "Review vocabulary terms on board",
+        "Students copy into notes"
+      ],
+      "student_output": "notes",
+      "materials": [
+        "vocabulary list on board"
+      ]
+    },
+    {
+      "name": "Document Analysis Practice",
+      "duration": 25,
+      "marzano_level": "analysis",
+      "instructions": [
+        "Read the Civil War letter carefully",
+        "Complete the SOAP analysis worksheet",
+        "Identify the speaker, occasion, audience, and purpose",
+        "Write a 2-paragraph response explaining whether the source is reliable"
+      ],
+      "student_output": "written response",
+      "materials": [
+        "Civil War letter (image)",
+        "SOAP worksheet"
+      ]
+    },
+    {
+      "name": "Whole Class Discussion",
+      "duration": 15,
+      "marzano_level": "analysis",
+      "instructions": [
+        "Share findings with class",
+        "Compare perspectives"
+      ],
+      "student_output": "verbal responses",
+      "materials": []
+    },
+    {
+      "name": "Exit Ticket",
+      "duration": 5,
+      "marzano_level": "comprehension",
+      "instructions": [
+        "Answer the exit ticket question"
+      ],
+      "student_output": "written response",
+      "materials": [
+        "exit ticket form"
+      ]
+    }
+  ],
+  "assessment": {
+    "type": "exit_ticket",
+    "questions": [
+      "Why is it important to evaluate source reliability?"
+    ]
+  }
+}
