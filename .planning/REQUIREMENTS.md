@@ -116,7 +116,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MARZ-01 | Phase 1 | Complete |
 | MARZ-02 | Phase 1 | Complete |
 | MARZ-03 | Phase 1 | Complete |
-| PERS-01 | Phase 3, Phase 4 | Partial (1/4 personas) |
+| PERS-01 | Phase 3, Phase 4 | Complete |
 | PERS-02 | Phase 3 | Complete |
 | PERS-03 | Phase 3 | Complete |
 | PERS-04 | Phase 3 | Complete |
@@ -135,10 +135,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | ASMT-02 | Phase 2 | Complete |
 | ASMT-03 | Phase 2 | Complete |
 | ASMT-04 | Phase 2 | Complete |
-| SEQN-01 | Phase 5 | Pending |
-| SEQN-02 | Phase 5 | Pending |
-| SEQN-03 | Phase 5 | Pending |
-| SEQN-04 | Phase 5 | Pending |
+| SEQN-01 | Phase 5 | Complete |
+| SEQN-02 | Phase 5 | Complete |
+| SEQN-03 | Phase 5 | Complete |
+| SEQN-04 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 31 total
@@ -146,9 +146,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 - Unmapped: 0
 
 **Notes:**
-- PERS-01 is partially implemented in Phase 3 (1 persona) and completed in Phase 4 (all 4 personas)
+- PERS-01 completed across Phase 3 (1 persona) and Phase 4 (all 4 personas)
 - All other requirements map to exactly one phase
+- All 31 v1 requirements now complete
 
 ---
 *Requirements defined: 2025-01-25*
-*Last updated: 2026-01-26 — Phase 3 requirements complete (PERS-02, PERS-03, PERS-04), PERS-01 partial*
+*Last updated: 2026-01-26 — All v1 requirements complete (31/31)*
