@@ -103,11 +103,12 @@ Plans:
   4. Teacher receives aggregated revision proposal addressing needs across all learner types
   5. Lessons are differentiated to work for diverse learners before teaching
 
-**Plans**: TBD
+**Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 04-01: TBD during phase planning
-- [ ] 04-02: TBD during phase planning
+- [ ] 04-01-PLAN.md — Create 3 new persona definitions (Jordan, Maya, Marcus)
+- [ ] 04-02-PLAN.md — Create run_multi_persona.py orchestrator
+- [ ] 04-03-PLAN.md — Add conflict detection/synthesis + SKILL.md + verification
 
 ### Phase 5: Multi-Lesson Sequences
 **Goal**: Teachers can plan coherent 2-4 week units with lesson interdependencies, skill progression, and context awareness across the sequence.
@@ -140,9 +141,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Core Lesson Generation | 6/6 | Complete | 2026-01-25 |
 | 2. Material Quality & Formatting | 5/5 | Complete | 2026-01-25 |
 | 3. Single Persona Feedback | 3/3 | Complete | 2026-01-26 |
-| 4. Multi-Persona Validation | 0/TBD | Not started | - |
+| 4. Multi-Persona Validation | 0/3 | Planning complete | - |
 | 5. Multi-Lesson Sequences | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2025-01-25*
-*Last updated: 2026-01-26 — Phase 3 complete (17/17 must-haves verified)*
+*Last updated: 2026-01-26 — Phase 4 planning complete (3 plans in 2 waves)*
