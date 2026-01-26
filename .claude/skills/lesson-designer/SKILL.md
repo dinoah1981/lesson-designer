@@ -1,18 +1,19 @@
 ---
 name: lesson-designer
-description: Designs classroom-ready lessons using Marzano's New Taxonomy framework, producing slide decks and student worksheets with cognitive rigor validation
-version: 2.0.0
+description: Design complete, classroom-ready lessons and multi-lesson sequences using Robert Marzano's New Taxonomy framework
+version: 3.0.0
 author: Claude
 ---
 
 # Lesson Designer Skill
 
-Design complete, classroom-ready lessons using Robert Marzano's New Taxonomy framework. This skill produces slide decks, student worksheets, and differentiated materials with cognitive rigor validation.
+Design complete, classroom-ready lessons and multi-lesson sequences using Robert Marzano's New Taxonomy framework. This skill produces slide decks, student worksheets, and differentiated materials with cognitive rigor validation.
 
 ## Workflow Overview
 
 Execute these stages sequentially:
 
+- [ ] **Stage 0.5: Sequence Planning** (optional - for multi-lesson units)
 - [ ] **Stage 1: Gather competency requirements**
 - [ ] **Stage 2: Decompose into skills and knowledge**
 - [ ] **Stage 2b: Teacher classification and proficiency targets**
@@ -24,11 +25,13 @@ Execute these stages sequentially:
 - [ ] **Stage 5c: Generate assessment (optional)**
 - [ ] **Stage 6: Validate outputs**
 - [ ] **Stage 7: Present to teacher**
+- [ ] **Stage 8: Generate Sequence Assessment** (sequences only)
 
 ## State Directory Structure
 
 Each lesson session maintains state in `.lesson-designer/sessions/{session_id}/`:
 
+**Single Lesson Structure:**
 ```
 .lesson-designer/sessions/{session_id}/
 ├── state.json                            # Current workflow stage and lesson data
@@ -38,6 +41,20 @@ Each lesson session maintains state in `.lesson-designer/sessions/{session_id}/`
 ├── 03_revision_plan.md                   # Teacher-readable revision plan (Stage 3.5)
 ├── slide_deck.pptx                       # Generated PowerPoint presentation
 └── student_worksheet.docx                # Generated Word worksheet
+```
+
+**Multi-Lesson Sequence Structure:**
+```
+.lesson-designer/sessions/{sequence_id}/
+├── sequence_metadata.json              # Sequence-level planning
+├── lesson_01/
+│   ├── 01_input.json                   # Existing lesson files
+│   ├── 04_lesson_final.json
+│   ├── lesson_summary.json             # Compressed summary for context
+│   └── materials/
+├── lesson_02/
+│   └── ...
+└── sequence_assessment.docx            # Summative assessment
 ```
 
 Session IDs use format: `YYYYMMDD-HHMMSS-{topic_slug}`
@@ -59,6 +76,51 @@ Base templates for material generation:
 - [templates/student_worksheet.docx](./templates/student_worksheet.docx) - Word template with Jinja2 placeholders
 
 ## Stage Details
+
+### Stage 0.5: Sequence Planning (Optional)
+
+**Purpose:** Plan coherent multi-lesson units (2-4 weeks) before generating individual lessons.
+
+**When to use:** When teacher wants multiple lessons that build on each other. Skip for single standalone lessons.
+
+**Process:**
+
+1. **Gather sequence information:**
+   - What competencies should students master by the end?
+   - How many total lessons in the sequence?
+   - What grade level and lesson duration?
+
+2. **Create sequence session:**
+   ```python
+   from sequence_manager import create_sequence_session
+
+   sequence_id = create_sequence_session(
+       competencies=["Analyze primary sources", "Construct evidence-based arguments"],
+       grade_level="8th grade",
+       total_lessons=6,
+       lesson_duration=55
+   )
+   ```
+
+3. **Assign competencies to lesson ranges:**
+   ```python
+   from sequence_manager import assign_competency_to_lessons
+
+   assign_competency_to_lessons(sequence_id, "comp-01", start_lesson=1, end_lesson=3)
+   assign_competency_to_lessons(sequence_id, "comp-02", start_lesson=4, end_lesson=6)
+   ```
+
+4. **Plan vocabulary progression:**
+   - Identify key terms for each lesson
+   - Terms accumulate - lesson 3 assumes students know lesson 1-2 terms
+
+**Output:**
+- `sequence_metadata.json` with competencies, lesson ranges, vocabulary plan
+- Lesson subdirectories ready for individual lesson generation
+
+**Next:** Execute Stages 1-7 for each lesson in sequence, using context from prior lessons.
+
+---
 
 ### Stage 1: Gather Competency Requirements
 
@@ -480,6 +542,14 @@ After Stage 2b, the JSON includes classifications and proficiency target:
 ### Stage 3: Design Lesson with Marzano Taxonomy
 
 **Purpose:** Create complete lesson plan with activities mapped to Marzano levels, ensuring cognitive rigor across the lesson.
+
+> **Sequence Mode:** If designing lesson N in a sequence, first build context:
+> ```python
+> from sequence_context import build_context_for_lesson
+> context = build_context_for_lesson(sequence_id, lesson_num)
+> # context includes prior_lessons, vocabulary_already_taught
+> ```
+> Use this context when designing the lesson to maintain progression coherence.
 
 **Inputs:**
 - Competency breakdown from Stage 2 (`02_competency_breakdown.json`)
@@ -1340,12 +1410,59 @@ Open the presentation in Normal view and check the first slide for:
 Good luck with your lesson!
 ```
 
+> **Sequence Mode:** After lesson approval, create summary for future context:
+> ```python
+> from sequence_context import create_lesson_summary, update_vocabulary_progression
+> summary = create_lesson_summary(sequence_id, lesson_num, lesson_json, persona_feedback)
+> update_vocabulary_progression(sequence_id, lesson_num, introduced_terms)
+> ```
+
 **Outputs:**
 - Teacher-facing summary of completed materials
 - Clear file locations
 - Options for next steps
 
 **Next:** Session complete (or return to earlier stage if changes requested)
+
+---
+
+### Stage 8: Generate Sequence Assessment (Sequences Only)
+
+**Purpose:** Create summative assessment covering the entire lesson sequence.
+
+**When to run:** After all lessons in sequence are complete.
+
+**Process:**
+
+1. **Choose assessment type:**
+   - `cumulative_test` - Multi-section test with questions from all lessons
+   - `performance_task` - Complex task requiring integration of all competencies
+   - `portfolio_review` - Reflection and self-assessment guide
+
+2. **Generate assessment:**
+   ```python
+   from generate_sequence_assessment import generate_sequence_assessment, SequenceAssessmentConfig
+
+   config = SequenceAssessmentConfig(
+       assessment_type="cumulative_test",
+       title="Unit 3 Assessment: Primary Source Analysis",
+       time_limit=60
+   )
+
+   assessment = generate_sequence_assessment(sequence_id, config)
+   ```
+
+3. **Review and approve:**
+   - Assessment covers vocabulary from all lessons
+   - Questions span Marzano levels (retrieval through knowledge utilization)
+   - Performance tasks integrate multiple competencies
+
+**Output:**
+- `sequence_assessment.json` - Assessment structure
+- `sequence_assessment.docx` - Printable assessment document
+- `sequence_assessment_key.docx` - Answer key (for cumulative_test)
+
+**Next:** Sequence complete
 
 ---
 
