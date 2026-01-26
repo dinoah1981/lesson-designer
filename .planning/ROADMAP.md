@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 1: Core Lesson Generation** - Single competency to complete materials
 - [x] **Phase 2: Material Quality & Formatting** - Worksheets, discussions, assessment variety
 - [x] **Phase 3: Single Persona Feedback** - Struggling learner feedback loop
-- [ ] **Phase 4: Multi-Persona Validation** - Full 4-persona feedback system
+- [x] **Phase 4: Multi-Persona Validation** - Full 4-persona feedback system
 - [ ] **Phase 5: Multi-Lesson Sequences** - Context awareness & sequence planning
 
 ## Phase Details
@@ -106,9 +106,9 @@ Plans:
 **Plans**: 3 plans in 2 waves
 
 Plans:
-- [ ] 04-01-PLAN.md — Create 3 new persona definitions (Jordan, Maya, Marcus)
-- [ ] 04-02-PLAN.md — Create run_multi_persona.py orchestrator
-- [ ] 04-03-PLAN.md — Add conflict detection/synthesis + SKILL.md + verification
+- [x] 04-01-PLAN.md — Create 3 new persona definitions (Jordan, Maya, Marcus)
+- [x] 04-02-PLAN.md — Create run_multi_persona.py orchestrator
+- [x] 04-03-PLAN.md — Add conflict detection/synthesis + SKILL.md + verification
 
 ### Phase 5: Multi-Lesson Sequences
 **Goal**: Teachers can plan coherent 2-4 week units with lesson interdependencies, skill progression, and context awareness across the sequence.
@@ -141,9 +141,9 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Core Lesson Generation | 6/6 | Complete | 2026-01-25 |
 | 2. Material Quality & Formatting | 5/5 | Complete | 2026-01-25 |
 | 3. Single Persona Feedback | 3/3 | Complete | 2026-01-26 |
-| 4. Multi-Persona Validation | 0/3 | Planning complete | - |
+| 4. Multi-Persona Validation | 3/3 | Complete | 2026-01-26 |
 | 5. Multi-Lesson Sequences | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2025-01-25*
-*Last updated: 2026-01-26 — Phase 4 planning complete (3 plans in 2 waves)*
+*Last updated: 2026-01-26 — Phase 4 complete (6/6 must-haves verified)*
