@@ -74,7 +74,7 @@ def add_header(doc: Document, lesson: Dict) -> None:
     table.autofit = True
 
     cells = table.rows[0].cells
-    cells[0].text = "Name: ________________________"
+    cells[0].text = "Name: _____________________"
     cells[1].text = "Period: ____"
     cells[2].text = "Date: ____________"
 
