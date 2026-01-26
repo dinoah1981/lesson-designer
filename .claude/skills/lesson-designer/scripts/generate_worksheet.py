@@ -103,7 +103,7 @@ def add_answer_lines(doc: Document, num_lines: int = 3, prefix: str = "") -> Non
     """Add underscore answer lines with double-spacing for student responses."""
     for i in range(num_lines):
         line_text = prefix if i == 0 and prefix else ""
-        p = doc.add_paragraph(line_text + "_" * 70)
+        p = doc.add_paragraph(line_text + "_" * 100)
         p.paragraph_format.line_spacing = 2.0  # Double-spaced
         p.paragraph_format.space_before = Pt(6)
         p.paragraph_format.space_after = Pt(6)
