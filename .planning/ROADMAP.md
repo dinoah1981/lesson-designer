@@ -38,12 +38,12 @@ Decimal phases appear between their surrounding integers in numeric order.
 **Plans**: 6 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — Skill structure, Marzano framework, and templates
-- [ ] 01-02-PLAN.md — Teacher input and competency decomposition
-- [ ] 01-03-PLAN.md — Marzano-based lesson design and validation
-- [ ] 01-04-PLAN.md — PowerPoint generation with sparse format
-- [ ] 01-05-PLAN.md — Word document generation with assessment
-- [ ] 01-06-PLAN.md — Integration and verification checkpoint
+- [x] 01-01-PLAN.md — Skill structure, Marzano framework, and templates
+- [x] 01-02-PLAN.md — Teacher input and competency decomposition
+- [x] 01-03-PLAN.md — Marzano-based lesson design and validation
+- [x] 01-04-PLAN.md — PowerPoint generation with sparse format
+- [x] 01-05-PLAN.md — Word document generation with assessment
+- [x] 01-06-PLAN.md — Integration and verification checkpoint
 
 ### Phase 2: Material Quality & Formatting
 **Goal**: Materials are physically usable and pedagogically complete with proper formatting, discussion structure, and diverse assessment types.
@@ -82,11 +82,12 @@ Plans:
   4. Tool proposes revisions based on feedback; teacher confirms before finalizing
   5. Feedback loop architecture is proven and ready to scale to additional personas
 
-**Plans**: TBD
+**Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 03-01: TBD during phase planning
-- [ ] 03-02: TBD during phase planning
+- [ ] 03-01-PLAN.md — Persona definition and parameterized evaluator script
+- [ ] 03-02-PLAN.md — Revision plan generator and workflow integration
+- [ ] 03-03-PLAN.md — End-to-end verification with teacher approval checkpoint
 
 ### Phase 4: Multi-Persona Validation
 **Goal**: Comprehensive pedagogical validation through 4 diverse student personas covering access, motivation, engagement, and ceiling issues.
@@ -138,10 +139,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Core Lesson Generation | 6/6 | Complete | 2026-01-25 |
 | 2. Material Quality & Formatting | 5/5 | Complete | 2026-01-25 |
-| 3. Single Persona Feedback | 0/TBD | Not started | - |
+| 3. Single Persona Feedback | 0/3 | Planned | - |
 | 4. Multi-Persona Validation | 0/TBD | Not started | - |
 | 5. Multi-Lesson Sequences | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2025-01-25*
-*Last updated: 2026-01-25 — Phase 2 complete (5/5 plans, all requirements verified)*
+*Last updated: 2026-01-26 — Phase 3 planned (3 plans in 3 waves)*
