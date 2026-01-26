@@ -1,0 +1,86 @@
+{
+  "persona_id": "struggling_learner_ell",
+  "persona_name": "Alex",
+  "description": "8th grade student reading 2-3 years below grade level with limited academic vocabulary",
+  "characteristics": {
+    "reading_level": {
+      "grade_equivalent": "5-6",
+      "actual_grade": "8",
+      "gap_years": 2,
+      "fluency_issues": true,
+      "vocabulary_gaps": true
+    },
+    "vocabulary": {
+      "tier_1_familiar": true,
+      "tier_2_academic": false,
+      "tier_3_domain": false,
+      "needs_explicit_definitions": true,
+      "needs_visual_supports": true
+    },
+    "attention": {
+      "sustained_focus_minutes": 20,
+      "multistep_limit": 3,
+      "needs_breaks": true
+    },
+    "background_knowledge": {
+      "assumes_limited_schema": true,
+      "needs_cultural_context": true,
+      "requires_explicit_connections": true
+    },
+    "scaffolding": {
+      "needs_models": true,
+      "needs_sentence_frames": true,
+      "needs_graphic_organizers": true,
+      "needs_worked_examples": true
+    }
+  },
+  "evaluation_criteria": [
+    "vocabulary_accessibility",
+    "instruction_clarity",
+    "scaffolding_adequacy",
+    "pacing_appropriateness",
+    "engagement_accessibility"
+  ],
+  "decision_rules": {
+    "vocabulary": {
+      "rule": "Flag tier 2/3 terms without explicit definition or visual support",
+      "severity_thresholds": {
+        "high": "3+ undefined academic terms",
+        "medium": "1-2 undefined academic terms",
+        "low": "All terms defined but lacking visual supports"
+      }
+    },
+    "pacing": {
+      "rule": "Flag activities longer than 20 min without clear break points",
+      "severity_thresholds": {
+        "high": "30+ min continuous activity without breaks",
+        "medium": "20-30 min activity without explicit break points",
+        "low": "15-20 min activity without natural transitions"
+      }
+    },
+    "scaffolding": {
+      "rule": "Flag production tasks (writing, speaking) without models or sentence frames",
+      "severity_thresholds": {
+        "high": "Complex writing (essay, analysis) without any scaffolding",
+        "medium": "Writing task with partial scaffolding (example OR frames, not both)",
+        "low": "Adequate scaffolding but could be enhanced"
+      }
+    },
+    "instructions": {
+      "rule": "Flag tasks with >3 steps without checklist or visual",
+      "severity_thresholds": {
+        "high": "5+ steps without visual checklist",
+        "medium": "4 steps without checklist or complex multi-step task",
+        "low": "3 steps but could benefit from visual organization"
+      }
+    },
+    "sentence_complexity": {
+      "rule": "Flag sentences averaging >20 words",
+      "severity_thresholds": {
+        "high": "25+ words average per sentence",
+        "medium": "20-25 words average per sentence",
+        "low": "15-20 words average (acceptable but could simplify)"
+      }
+    }
+  }
+}
