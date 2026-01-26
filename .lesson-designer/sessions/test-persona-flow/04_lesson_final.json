@@ -7,11 +7,15 @@
   "vocabulary": [
     {
       "word": "bias",
-      "definition": null
+      "definition": "A personal preference or prejudice that affects how someone views information",
+      "example": "A soldier writing a letter home might show bias toward his own side in the war",
+      "visual": "scales_tilted"
     },
     {
       "word": "reliability",
-      "definition": null
+      "definition": "How trustworthy or accurate a source of information is",
+      "example": "A diary entry written on the day of an event is more reliable than a story told years later",
+      "visual": "trust_meter"
     },
     {
       "word": "primary source",
@@ -19,10 +23,50 @@
     },
     {
       "word": "perspective",
-      "definition": null
+      "definition": "The particular way someone sees or understands a situation based on their position and experiences",
+      "example": "A Union soldier and a Confederate soldier would have different perspectives on the same battle",
+      "visual": "two_viewpoints"
     }
   ],
   "activities": [
+    {
+      "name": "Vocabulary Pre-Teaching",
+      "duration": 5,
+      "description": "Review key vocabulary before main lesson",
+      "type": "vocabulary_introduction",
+      "marzano_level": "retrieval",
+      "instructions": [
+        "Review each vocabulary term",
+        "Read definition and example",
+        "View visual representation"
+      ],
+      "student_output": "Vocabulary notes",
+      "assessment_method": "Quick check for understanding",
+      "terms": [
+        "bias",
+        "reliability",
+        "perspective"
+      ]
+    },
+    {
+      "name": "Vocabulary Pre-Teaching",
+      "duration": 5,
+      "description": "Review key vocabulary before main lesson",
+      "type": "vocabulary_introduction",
+      "marzano_level": "retrieval",
+      "instructions": [
+        "Review each vocabulary term",
+        "Read definition and example",
+        "View visual representation"
+      ],
+      "student_output": "Vocabulary notes",
+      "assessment_method": "Quick check for understanding",
+      "terms": [
+        "bias",
+        "reliability",
+        "perspective"
+      ]
+    },
     {
       "name": "Vocabulary Introduction",
       "duration": 5,
@@ -50,7 +94,16 @@
       "materials": [
         "Civil War letter (image)",
         "SOAP worksheet"
-      ]
+      ],
+      "sentence_frames": [
+        "The speaker of this document is _____ because _____.",
+        "This source was created during _____ (when).",
+        "The audience for this document was _____ because _____.",
+        "The purpose of this document was to _____ (persuade/inform/entertain).",
+        "This source is [reliable/unreliable] because _____.",
+        "Evidence from the document that supports my thinking is: _____."
+      ],
+      "include_sentence_frames": true
     },
     {
       "name": "Whole Class Discussion",
@@ -80,6 +133,19 @@
     "type": "exit_ticket",
     "questions": [
       "Why is it important to evaluate source reliability?"
+    ]
+  },
+  "_revision_applied": {
+    "date": "2026-01-26T09:04:53.603431",
+    "revision_plan": ".lesson-designer/sessions/test-persona-flow/03_revision_plan.json",
+    "changes_applied": [
+      "change_001",
+      "change_002"
+    ],
+    "changes_skipped": [
+      "change_003",
+      "change_004",
+      "change_005"
     ]
   }
 }

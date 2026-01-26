@@ -9,7 +9,7 @@
       "id": "change_001",
       "element": "vocabulary",
       "severity": "high",
-      "status": "pending",
+      "status": "approved",
       "current_state": "3 academic term(s) lack explicit definitions or visual supports",
       "proposed_change": "Add explicit definitions with examples or visual supports for all academic terms",
       "rationale": "Students reading 2-3 years below grade level need explicit vocabulary instruction with multiple representations",
@@ -19,19 +19,19 @@
         "add_definitions": true,
         "definitions": {
           "bias": {
-            "definition": "",
-            "example": "",
-            "visual": ""
+            "definition": "A personal preference or prejudice that affects how someone views information",
+            "example": "A soldier writing a letter home might show bias toward his own side in the war",
+            "visual": "scales_tilted"
           },
           "reliability": {
-            "definition": "",
-            "example": "",
-            "visual": ""
+            "definition": "How trustworthy or accurate a source of information is",
+            "example": "A diary entry written on the day of an event is more reliable than a story told years later",
+            "visual": "trust_meter"
           },
           "perspective": {
-            "definition": "",
-            "example": "",
-            "visual": ""
+            "definition": "The particular way someone sees or understands a situation based on their position and experiences",
+            "example": "A Union soldier and a Confederate soldier would have different perspectives on the same battle",
+            "visual": "two_viewpoints"
           }
         },
         "add_pre_teaching_activity": true,
@@ -48,7 +48,7 @@
       "id": "change_002",
       "element": "scaffolding",
       "severity": "high",
-      "status": "pending",
+      "status": "approved",
       "current_state": "Activity 'Document Analysis Practice': Writing task lacks sentence frames or model responses",
       "proposed_change": "Add sentence frames and/or worked example",
       "rationale": "Struggling writers need explicit models showing how to structure academic responses",
@@ -56,7 +56,14 @@
       "persona_source": "Alex",
       "implementation": {
         "add_sentence_frames": true,
-        "sentence_frames": [],
+        "sentence_frames": [
+          "The speaker of this document is _____ because _____.",
+          "This source was created during _____ (when).",
+          "The audience for this document was _____ because _____.",
+          "The purpose of this document was to _____ (persuade/inform/entertain).",
+          "This source is [reliable/unreliable] because _____.",
+          "Evidence from the document that supports my thinking is: _____."
+        ],
         "add_worked_example": false,
         "worked_example": {},
         "add_graphic_organizer": false,
