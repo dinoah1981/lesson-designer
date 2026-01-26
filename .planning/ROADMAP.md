@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Core Lesson Generation** - Single competency to complete materials
 - [x] **Phase 2: Material Quality & Formatting** - Worksheets, discussions, assessment variety
-- [ ] **Phase 3: Single Persona Feedback** - Struggling learner feedback loop
+- [x] **Phase 3: Single Persona Feedback** - Struggling learner feedback loop
 - [ ] **Phase 4: Multi-Persona Validation** - Full 4-persona feedback system
 - [ ] **Phase 5: Multi-Lesson Sequences** - Context awareness & sequence planning
 
@@ -85,9 +85,9 @@ Plans:
 **Plans**: 3 plans in 3 waves
 
 Plans:
-- [ ] 03-01-PLAN.md — Persona definition and parameterized evaluator script
-- [ ] 03-02-PLAN.md — Revision plan generator and workflow integration
-- [ ] 03-03-PLAN.md — End-to-end verification with teacher approval checkpoint
+- [x] 03-01-PLAN.md — Persona definition and parameterized evaluator script
+- [x] 03-02-PLAN.md — Revision plan generator and workflow integration
+- [x] 03-03-PLAN.md — End-to-end verification with teacher approval checkpoint
 
 ### Phase 4: Multi-Persona Validation
 **Goal**: Comprehensive pedagogical validation through 4 diverse student personas covering access, motivation, engagement, and ceiling issues.
@@ -139,10 +139,10 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Core Lesson Generation | 6/6 | Complete | 2026-01-25 |
 | 2. Material Quality & Formatting | 5/5 | Complete | 2026-01-25 |
-| 3. Single Persona Feedback | 0/3 | Planned | - |
+| 3. Single Persona Feedback | 3/3 | Complete | 2026-01-26 |
 | 4. Multi-Persona Validation | 0/TBD | Not started | - |
 | 5. Multi-Lesson Sequences | 0/TBD | Not started | - |
 
 ---
 *Roadmap created: 2025-01-25*
-*Last updated: 2026-01-26 — Phase 3 planned (3 plans in 3 waves)*
+*Last updated: 2026-01-26 — Phase 3 complete (17/17 must-haves verified)*

@@ -116,10 +116,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MARZ-01 | Phase 1 | Complete |
 | MARZ-02 | Phase 1 | Complete |
 | MARZ-03 | Phase 1 | Complete |
-| PERS-01 | Phase 3, Phase 4 | Pending |
-| PERS-02 | Phase 3 | Pending |
-| PERS-03 | Phase 3 | Pending |
-| PERS-04 | Phase 3 | Pending |
+| PERS-01 | Phase 3, Phase 4 | Partial (1/4 personas) |
+| PERS-02 | Phase 3 | Complete |
+| PERS-03 | Phase 3 | Complete |
+| PERS-04 | Phase 3 | Complete |
 | SLID-01 | Phase 1 | Complete |
 | SLID-02 | Phase 1 | Complete |
 | SLID-03 | Phase 1 | Complete |
@@ -151,4 +151,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2025-01-25*
-*Last updated: 2026-01-25 — Phase 1 and Phase 2 requirements complete*
+*Last updated: 2026-01-26 — Phase 3 requirements complete (PERS-02, PERS-03, PERS-04), PERS-01 partial*
