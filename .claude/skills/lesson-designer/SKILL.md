@@ -18,6 +18,7 @@ Execute these stages sequentially:
 - [ ] **Stage 2b: Teacher classification and proficiency targets**
 - [ ] **Stage 3: Design lesson with Marzano taxonomy**
 - [ ] **Stage 3b: Validate cognitive rigor**
+- [ ] **Stage 3.5: Persona feedback & revision**
 - [ ] **Stage 5: Generate materials (.pptx + .docx)**
 - [ ] **Stage 5b: Generate simulation (optional)**
 - [ ] **Stage 5c: Generate assessment (optional)**
@@ -30,10 +31,13 @@ Each lesson session maintains state in `.lesson-designer/sessions/{session_id}/`
 
 ```
 .lesson-designer/sessions/{session_id}/
-├── state.json              # Current workflow stage and lesson data
-├── lesson.json             # Complete lesson plan with activities
-├── slide_deck.pptx         # Generated PowerPoint presentation
-└── student_worksheet.docx  # Generated Word worksheet
+├── state.json                            # Current workflow stage and lesson data
+├── lesson.json                           # Complete lesson plan with activities
+├── 03_feedback_struggling_learner.json   # Persona feedback (Stage 3.5)
+├── 03_revision_plan.json                 # Revision plan with teacher decisions (Stage 3.5)
+├── 03_revision_plan.md                   # Teacher-readable revision plan (Stage 3.5)
+├── slide_deck.pptx                       # Generated PowerPoint presentation
+└── student_worksheet.docx                # Generated Word worksheet
 ```
 
 Session IDs use format: `YYYYMMDD-HHMMSS-{topic_slug}`
@@ -706,7 +710,118 @@ RESULT: PASSED WITH WARNINGS
 **Requirements Covered:**
 - MARZ-03: Cognitive rigor enforced with minimum 40% higher-order thinking
 
-**Next:** Stage 5 (if passed) or Stage 3 (if failed, up to 3 attempts)
+**Next:** Stage 3.5 (Persona Feedback & Revision) or Stage 3 (if failed, up to 3 attempts)
+
+---
+
+### Stage 3.5: Persona Feedback & Revision
+
+**Purpose:** Evaluate lesson design through struggling learner persona and apply teacher-approved revisions before generating materials.
+
+**Inputs:**
+- Validated lesson design from Stage 3b (`04_lesson_final.json`)
+- Persona definition (`.claude/skills/lesson-designer/personas/struggling_learner.json`)
+
+**Process:**
+
+#### Step 1: Run Persona Evaluation
+
+```bash
+python .claude/skills/lesson-designer/scripts/persona_evaluator.py \
+    .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+    .claude/skills/lesson-designer/personas/struggling_learner.json \
+    .lesson-designer/sessions/{session_id}/03_feedback_struggling_learner.json
+```
+
+This produces structured feedback JSON with:
+- Accessibility rating (1-5 scale)
+- Strengths (what works well for struggling learners)
+- Concerns (issues with severity ratings)
+- Recommendations (specific changes with rationale)
+
+#### Step 2: Generate Revision Plan
+
+```bash
+python .claude/skills/lesson-designer/scripts/generate_revision_plan.py \
+    .lesson-designer/sessions/{session_id}/03_feedback_struggling_learner.json \
+    .lesson-designer/sessions/{session_id}/03_revision_plan.json \
+    --markdown .lesson-designer/sessions/{session_id}/03_revision_plan.md
+```
+
+This produces:
+- `03_revision_plan.json` - Structured revision plan
+- `03_revision_plan.md` - Teacher-readable revision plan
+
+#### Step 3: Present Revision Plan to Teacher
+
+Present the Markdown revision plan to the teacher with this format:
+
+```
+Based on struggling learner feedback, I've identified {N} recommended changes to improve accessibility.
+
+[Show 03_revision_plan.md content]
+
+Do you approve the critical changes?
+1. {Change 1 summary}
+2. {Change 2 summary}
+
+Reply "approve all" or specify which changes to approve/reject.
+```
+
+Wait for teacher response before proceeding.
+
+#### Step 4: Apply Approved Revisions
+
+If teacher approves changes:
+
+```python
+from generate_revision_plan import apply_revisions
+
+apply_revisions(
+    lesson_path='.lesson-designer/sessions/{session_id}/04_lesson_final.json',
+    revision_plan_path='.lesson-designer/sessions/{session_id}/03_revision_plan.json',
+    output_path='.lesson-designer/sessions/{session_id}/04_lesson_final.json'  # Overwrites with revised version
+)
+```
+
+If teacher rejects all changes, proceed with original lesson design.
+
+#### Step 5: Log Revision Decision
+
+Update `03_revision_plan.json` with teacher decisions:
+- status: "approved" | "approved_with_modifications" | "rejected"
+- teacher_notes: Any modifications or rejection reasons
+
+**Outputs:**
+- `03_feedback_struggling_learner.json` - Persona feedback
+- `03_revision_plan.json` - Revision plan with teacher decisions
+- `03_revision_plan.md` - Teacher-readable plan
+- `04_lesson_final.json` - Updated with approved revisions
+
+**Evaluation Criteria:**
+
+The struggling learner persona ("Alex") evaluates:
+1. **Vocabulary Accessibility** - Tier 2/3 terms defined? Reading level appropriate?
+2. **Instruction Clarity** - Steps numbered? <3 steps or checklist provided?
+3. **Scaffolding Adequacy** - Models for writing tasks? Sentence frames? Graphic organizers?
+4. **Pacing Appropriateness** - Activities <20 min? Break points for longer activities?
+5. **Engagement Accessibility** - Multiple entry points? Choice opportunities?
+
+**When to Skip Stage 3.5:**
+
+Stage 3.5 can be skipped if:
+- Teacher explicitly opts out (`"skip_persona_feedback": true` in 01_input.json)
+- Lesson is specifically designed for advanced learners only
+
+Default: Always run Stage 3.5 for inclusive lesson design.
+
+**Requirements Covered:**
+- PERS-01 (partial): Tool runs lesson through struggling learner persona
+- PERS-02: Persona provides reaction describing likely response
+- PERS-03: Persona provides specific pedagogical recommendations
+- PERS-04: Tool proposes revisions; teacher confirms before finalizing
+
+**Next:** Stage 5 (Generate Materials)
 
 ---
 
@@ -1306,6 +1421,14 @@ STAGE 3b: Validate cognitive rigor
   [ ] Saved final validated design
       Output: Validation passed -> 04_lesson_final.json
 
+STAGE 3.5: Persona feedback & revision
+  [ ] Ran persona_evaluator.py script
+  [ ] Generated revision plan (JSON + Markdown)
+  [ ] Presented revision plan to teacher
+  [ ] Applied approved revisions or proceeded with original
+  [ ] Logged teacher decisions
+      Output: 03_feedback_struggling_learner.json, 03_revision_plan.json, 03_revision_plan.md
+
 STAGE 5: Generate materials
   [ ] Generated PowerPoint slide deck
       Output: 05_slides.pptx
@@ -1342,6 +1465,17 @@ Session files location: .lesson-designer/sessions/{session_id}/
 # Stage 3b: Validate cognitive rigor
 python .claude/skills/lesson-designer/scripts/validate_marzano.py \
   .lesson-designer/sessions/{session_id}/03_lesson_design_v1.json
+
+# Stage 3.5: Persona feedback & revision
+python .claude/skills/lesson-designer/scripts/persona_evaluator.py \
+  .lesson-designer/sessions/{session_id}/04_lesson_final.json \
+  .claude/skills/lesson-designer/personas/struggling_learner.json \
+  .lesson-designer/sessions/{session_id}/03_feedback_struggling_learner.json
+
+python .claude/skills/lesson-designer/scripts/generate_revision_plan.py \
+  .lesson-designer/sessions/{session_id}/03_feedback_struggling_learner.json \
+  .lesson-designer/sessions/{session_id}/03_revision_plan.json \
+  --markdown .lesson-designer/sessions/{session_id}/03_revision_plan.md
 
 # Stage 5: Generate slides
 # Claude generates slides directly using python-pptx (see design principles above)
