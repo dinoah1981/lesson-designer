@@ -148,7 +148,7 @@ def generate_short_answer_section(doc: Document, questions: List[Dict], start_nu
         # Answer lines with double spacing
         lines = q.get('lines', 4)
         for _ in range(lines):
-            answer_line = doc.add_paragraph("_" * 120)
+            answer_line = doc.add_paragraph("_" * 80)
             answer_line.paragraph_format.line_spacing = 2.0
             answer_line.paragraph_format.space_after = Pt(3)
             for run in answer_line.runs:
@@ -196,7 +196,7 @@ def generate_essay_section(doc: Document, questions: List[Dict], start_num: int 
         # Answer space - use "Continue on back if needed"
         doc.add_paragraph()
         for _ in range(10):
-            answer_line = doc.add_paragraph("_" * 120)
+            answer_line = doc.add_paragraph("_" * 80)
             answer_line.paragraph_format.line_spacing = 2.0
             answer_line.paragraph_format.space_after = Pt(2)
 
@@ -379,7 +379,7 @@ def generate_performance_task(assessment_data: Dict, output_path: str) -> bool:
     workspace_note.runs[0].font.size = Pt(10)
 
     for _ in range(15):
-        line = doc.add_paragraph("_" * 120)
+        line = doc.add_paragraph("_" * 80)
         line.paragraph_format.line_spacing = 2.0
 
     doc.save(output_path)
@@ -471,19 +471,19 @@ def generate_socratic_guide(assessment_data: Dict, output_path: str) -> bool:
     doc.add_paragraph()
     doc.add_paragraph("My initial response to the essential question:")
     for _ in range(4):
-        line = doc.add_paragraph("_" * 120)
+        line = doc.add_paragraph("_" * 80)
         line.paragraph_format.line_spacing = 2.0
 
     doc.add_paragraph()
     doc.add_paragraph("Evidence from the text I want to reference:")
     for _ in range(4):
-        line = doc.add_paragraph("_" * 120)
+        line = doc.add_paragraph("_" * 80)
         line.paragraph_format.line_spacing = 2.0
 
     doc.add_paragraph()
     doc.add_paragraph("Questions I have for my peers:")
     for _ in range(3):
-        line = doc.add_paragraph("_" * 120)
+        line = doc.add_paragraph("_" * 80)
         line.paragraph_format.line_spacing = 2.0
 
     doc.save(output_path)
