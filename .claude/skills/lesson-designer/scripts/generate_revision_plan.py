@@ -967,14 +967,42 @@ def main():
     parser = argparse.ArgumentParser(
         description='Generate revision plan from persona feedback'
     )
-    parser.add_argument('feedback', help='Path to feedback JSON file (or comma-separated list for multiple)')
-    parser.add_argument('output', help='Path to output revision plan JSON')
+    parser.add_argument('feedback', nargs='?',
+                        help='Path to feedback JSON file (or comma-separated list for multiple)')
+    parser.add_argument('output', nargs='?',
+                        help='Path to output revision plan JSON')
     parser.add_argument('--markdown', help='Path to output Markdown file (optional)')
     parser.add_argument('--lesson', help='Path to lesson JSON file (optional, for context)')
+    parser.add_argument('--apply', action='store_true',
+                        help='Apply revisions instead of generating plan')
+    parser.add_argument('--revision-plan',
+                        help='Path to revision plan JSON (required with --apply)')
+    parser.add_argument('--output-lesson',
+                        help='Path to output revised lesson JSON (required with --apply)')
 
     args = parser.parse_args()
 
     try:
+        # Apply mode - requires --lesson, --revision-plan, --output-lesson
+        if args.apply:
+            if not all([args.lesson, args.revision_plan, args.output_lesson]):
+                parser.error('--apply requires --lesson, --revision-plan, and --output-lesson')
+
+            result = apply_revisions(args.lesson, args.revision_plan, args.output_lesson)
+
+            print(f"\n{'='*60}")
+            print(f"Revisions Applied")
+            print(f"{'='*60}")
+            print(f"Applied: {len(result['applied'])} changes")
+            print(f"Skipped: {len(result['skipped'])} changes")
+            print(f"Output: {args.output_lesson}")
+            print(f"{'='*60}\n")
+            return
+
+        # Generate mode - requires feedback and output
+        if not args.feedback or not args.output:
+            parser.error('feedback and output are required when not using --apply')
+
         # Parse feedback file paths (support comma-separated list for Phase 4)
         feedback_paths = [f.strip() for f in args.feedback.split(',')]
 
@@ -995,9 +1023,19 @@ def main():
         print(f"Date: {revision_plan['generated_date']}")
         print(f"Personas: {', '.join(revision_plan['personas_consulted'])}")
         print(f"\nChanges:")
-        print(f"  Critical: {revision_plan['metadata']['critical_count']}")
-        print(f"  Optional: {revision_plan['metadata']['optional_count']}")
-        print(f"  Low priority: {revision_plan['metadata']['low_priority_count']}")
+        if 'synthesis' in revision_plan:
+            # Multi-persona mode
+            synthesis = revision_plan['synthesis']
+            print(f"  Universal improvements: {len(synthesis.get('universal_improvements', []))}")
+            print(f"  Accessibility critical: {len(synthesis.get('accessibility_critical', []))}")
+            print(f"  Engagement enhancements: {len(synthesis.get('engagement_enhancements', []))}")
+            print(f"  Challenge extensions: {len(synthesis.get('challenge_extensions', []))}")
+            print(f"  Conflicts: {len(synthesis.get('conflicting_recommendations', []))}")
+        else:
+            # Single-persona mode
+            print(f"  Critical: {revision_plan['metadata']['critical_count']}")
+            print(f"  Optional: {revision_plan['metadata']['optional_count']}")
+            print(f"  Low priority: {revision_plan['metadata']['low_priority_count']}")
         print(f"\nRevision plan saved to: {args.output}")
 
         # Generate Markdown if requested
