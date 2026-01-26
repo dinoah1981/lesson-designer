@@ -1,0 +1,100 @@
+{
+  "persona": "struggling_learner_ell",
+  "persona_name": "Alex",
+  "evaluation_date": "2026-01-26",
+  "lesson_title": "Photosynthesis Vocabulary Quiz Prep",
+  "overall_assessment": {
+    "accessibility_rating": "2/5",
+    "summary": "This lesson poses significant challenges for Alex. Major revisions needed to ensure accessibility.",
+    "primary_concern": "8 academic term(s) lack explicit definitions or visual supports"
+  },
+  "strengths": [],
+  "concerns": [
+    {
+      "element": "vocabulary",
+      "issue": "8 academic term(s) lack explicit definitions or visual supports",
+      "severity": "high",
+      "impact": "Alex will struggle to understand tier 2/3 vocabulary: chlorophyll, stomata, thylakoid",
+      "evidence": [
+        "chlorophyll",
+        "stomata",
+        "thylakoid",
+        "stroma",
+        "ATP synthase",
+        "NADPH",
+        "carbon fixation",
+        "Calvin cycle"
+      ],
+      "recommendation": {
+        "change": "Add explicit definitions with examples or visual supports for all academic terms",
+        "rationale": "Students reading 2-3 years below grade level need explicit vocabulary instruction with multiple representations",
+        "implementation": "Include definition, example sentence, and visual representation (diagram, icon, or photo) for each term"
+      }
+    },
+    {
+      "element": "instruction_clarity",
+      "issue": "Activity 'Vocabulary Drill': 4 steps exceeds Alex's multistep limit (3 steps)",
+      "severity": "medium",
+      "impact": "Alex may forget earlier steps or lose track of the overall task goal",
+      "evidence": "Instructions have 4 steps: Copy each vocabulary word and its definition from the board into your notebook; You have 20 minutes to copy all 8 terms; Work silently and independently...",
+      "recommendation": {
+        "change": "Add visual checklist or break into smaller sub-tasks",
+        "rationale": "Struggling learners benefit from chunked tasks with visual progress tracking",
+        "implementation": "Create a numbered checklist graphic organizer with checkbox for each step"
+      }
+    },
+    {
+      "element": "instruction_clarity",
+      "issue": "Activity 'Memorization Practice': 6 steps exceeds Alex's multistep limit (3 steps)",
+      "severity": "high",
+      "impact": "Alex may forget earlier steps or lose track of the overall task goal",
+      "evidence": "Instructions have 6 steps: Find a partner; Take turns quizzing each other on the 8 vocabulary words; Say the word, your partner says the definition...",
+      "recommendation": {
+        "change": "Add visual checklist or break into smaller sub-tasks",
+        "rationale": "Struggling learners benefit from chunked tasks with visual progress tracking",
+        "implementation": "Create a numbered checklist graphic organizer with checkbox for each step"
+      }
+    },
+    {
+      "element": "instruction_clarity",
+      "issue": "Activity 'Written Quiz Practice': 4 steps exceeds Alex's multistep limit (3 steps)",
+      "severity": "medium",
+      "impact": "Alex may forget earlier steps or lose track of the overall task goal",
+      "evidence": "Instructions have 4 steps: Complete the matching quiz independently; Match each term to its correct definition; You may not use your notes...",
+      "recommendation": {
+        "change": "Add visual checklist or break into smaller sub-tasks",
+        "rationale": "Struggling learners benefit from chunked tasks with visual progress tracking",
+        "implementation": "Create a numbered checklist graphic organizer with checkbox for each step"
+      }
+    },
+    {
+      "element": "engagement",
+      "issue": "Limited modality variety - primarily single-mode instruction",
+      "severity": "medium",
+      "impact": "Alex may disengage if instruction doesn't match preferred learning style",
+      "evidence": "Only 0 modality detected: []",
+      "recommendation": {
+        "change": "Add visual or kinesthetic components to complement verbal instruction",
+        "rationale": "UDL principles suggest multiple means of representation increase accessibility",
+        "implementation": "Add graphic organizer (visual) or think-pair-share (kinesthetic/social)"
+      }
+    }
+  ],
+  "pedagogical_notes": {
+    "overall_difficulty": "Very challenging - multiple significant barriers",
+    "priority_revisions": [
+      "vocabulary",
+      "instruction_clarity"
+    ],
+    "deferred_to_teacher": [
+      "Content-specific background knowledge needed",
+      "Cultural relevance and student interests",
+      "Specific accommodations beyond general scaffolding"
+    ]
+  },
+  "metadata": {
+    "confidence": "high",
+    "persona_version": "1.0",
+    "evaluator_version": "1.0"
+  }
+}

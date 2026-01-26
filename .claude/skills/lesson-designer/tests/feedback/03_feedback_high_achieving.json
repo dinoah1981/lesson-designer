@@ -1,0 +1,58 @@
+{
+  "persona": "high_achieving",
+  "persona_name": "Marcus",
+  "evaluation_date": "2026-01-26",
+  "lesson_title": "Analyzing Primary Sources: Civil War Era",
+  "overall_assessment": {
+    "accessibility_rating": "5/5",
+    "summary": "This lesson is highly accessible for Marcus. Minor adjustments could further support engagement.",
+    "primary_concern": "Limited pacing flexibility for students who master content quickly"
+  },
+  "strengths": [
+    {
+      "element": "challenge_level",
+      "observation": "Lesson includes advanced or challenging options",
+      "why_helpful": "Marcus has access to appropriately challenging work"
+    },
+    {
+      "element": "abstract_complexity",
+      "observation": "Lesson includes abstract or theoretical components",
+      "why_helpful": "Marcus can engage at appropriate level of abstraction"
+    },
+    {
+      "element": "meaningful_work",
+      "observation": "Lesson includes substantive intellectual work beyond drill",
+      "why_helpful": "Marcus has access to genuinely meaningful learning experiences"
+    }
+  ],
+  "concerns": [
+    {
+      "element": "pacing_flexibility",
+      "issue": "Limited pacing flexibility for students who master content quickly",
+      "severity": "medium",
+      "impact": "Marcus may finish early and wait; no option to move to advanced content",
+      "evidence": "No explicit curriculum compacting or acceleration options",
+      "recommendation": {
+        "change": "Build in flexible pacing for students who demonstrate early mastery",
+        "rationale": "Respecting gifted students' time shows they are valued",
+        "implementation": "Create \"early finisher\" pathway to substantively different work"
+      }
+    }
+  ],
+  "pedagogical_notes": {
+    "overall_difficulty": "Highly accessible - minimal barriers",
+    "priority_revisions": [
+      "pacing_flexibility"
+    ],
+    "deferred_to_teacher": [
+      "Content-specific background knowledge needed",
+      "Cultural relevance and student interests",
+      "Specific accommodations beyond general scaffolding"
+    ]
+  },
+  "metadata": {
+    "confidence": "high",
+    "persona_version": "1.0",
+    "evaluator_version": "1.0"
+  }
+}

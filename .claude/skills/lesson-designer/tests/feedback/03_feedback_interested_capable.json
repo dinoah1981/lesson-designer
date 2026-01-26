@@ -1,0 +1,53 @@
+{
+  "persona": "interested_capable",
+  "persona_name": "Maya",
+  "evaluation_date": "2026-01-26",
+  "lesson_title": "Analyzing Primary Sources: Civil War Era",
+  "overall_assessment": {
+    "accessibility_rating": "5/5",
+    "summary": "This lesson is highly accessible for Maya. Minor adjustments could further support engagement.",
+    "primary_concern": "None - lesson is accessible"
+  },
+  "strengths": [
+    {
+      "element": "depth_opportunities",
+      "observation": "Lesson includes opportunities for deeper exploration",
+      "why_helpful": "Maya can pursue genuine intellectual curiosity within the lesson"
+    },
+    {
+      "element": "inquiry_support",
+      "observation": "Lesson explicitly encourages student-generated questions",
+      "why_helpful": "Maya can pursue authentic curiosity and self-directed inquiry"
+    },
+    {
+      "element": "discussion_quality",
+      "observation": "Lesson includes substantive discussion opportunities",
+      "why_helpful": "Maya can engage in meaningful academic discourse with peers"
+    },
+    {
+      "element": "extension_availability",
+      "observation": "Lesson includes meaningful extension opportunities",
+      "why_helpful": "Maya has paths to pursue deeper learning when ready"
+    },
+    {
+      "element": "intellectual_rigor",
+      "observation": "3 activities require higher-order thinking",
+      "why_helpful": "Maya has opportunities for genuine intellectual engagement"
+    }
+  ],
+  "concerns": [],
+  "pedagogical_notes": {
+    "overall_difficulty": "Highly accessible - minimal barriers",
+    "priority_revisions": [],
+    "deferred_to_teacher": [
+      "Content-specific background knowledge needed",
+      "Cultural relevance and student interests",
+      "Specific accommodations beyond general scaffolding"
+    ]
+  },
+  "metadata": {
+    "confidence": "high",
+    "persona_version": "1.0",
+    "evaluator_version": "1.0"
+  }
+}

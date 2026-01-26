@@ -1,0 +1,78 @@
+{
+  "persona": "unmotivated_capable",
+  "persona_name": "Jordan",
+  "evaluation_date": "2026-01-26",
+  "lesson_title": "Photosynthesis Vocabulary Quiz Prep",
+  "overall_assessment": {
+    "accessibility_rating": "2/5",
+    "summary": "This lesson poses significant challenges for Jordan. Major revisions needed to ensure accessibility.",
+    "primary_concern": "Lesson framed as test prep with no real-world relevance explanation"
+  },
+  "strengths": [
+    {
+      "element": "student_choice",
+      "observation": "Lesson includes student choice opportunities",
+      "why_helpful": "Jordan can exercise autonomy and approach work in preferred way"
+    },
+    {
+      "element": "autonomy_opportunities",
+      "observation": "Lesson includes opportunities for student autonomy",
+      "why_helpful": "Jordan can exercise agency over learning process"
+    }
+  ],
+  "concerns": [
+    {
+      "element": "task_relevance",
+      "issue": "Lesson framed as test prep with no real-world relevance explanation",
+      "severity": "high",
+      "impact": "Jordan will disengage immediately from work perceived as pointless drill",
+      "evidence": "Objective: 'Students will memorize the steps of photosynthesis' - no relevance to student life/future",
+      "recommendation": {
+        "change": "Reframe objective around authentic purpose and add \"why this matters\" context",
+        "rationale": "Unmotivated capable students need to see purpose before they invest effort",
+        "implementation": "Begin lesson with compelling hook showing real-world application of skill"
+      }
+    },
+    {
+      "element": "cognitive_challenge",
+      "issue": "All activities are retrieval/comprehension level - no higher-order thinking required",
+      "severity": "high",
+      "impact": "Jordan will find this intellectually boring and disengage; capable of much more",
+      "evidence": "Marzano levels: ['retrieval', 'retrieval', 'retrieval']",
+      "recommendation": {
+        "change": "Add analysis or knowledge utilization tasks that challenge capable students",
+        "rationale": "Above-grade-level students need cognitive challenge to stay engaged",
+        "implementation": "Replace at least one drill activity with analysis, evaluation, or creation task"
+      }
+    },
+    {
+      "element": "real_world_connection",
+      "issue": "Pure academic exercise with no connection to authentic contexts",
+      "severity": "high",
+      "impact": "Jordan sees no point in work disconnected from reality; effort will be minimal",
+      "evidence": "Activities focus on abstract practice without application context",
+      "recommendation": {
+        "change": "Frame activities within authentic scenario or real-world problem",
+        "rationale": "Capable students engage when they see skills used in actual contexts",
+        "implementation": "Use case study, simulation, or current events as context for skills practice"
+      }
+    }
+  ],
+  "pedagogical_notes": {
+    "overall_difficulty": "Very challenging - multiple significant barriers",
+    "priority_revisions": [
+      "task_relevance",
+      "cognitive_challenge"
+    ],
+    "deferred_to_teacher": [
+      "Content-specific background knowledge needed",
+      "Cultural relevance and student interests",
+      "Specific accommodations beyond general scaffolding"
+    ]
+  },
+  "metadata": {
+    "confidence": "high",
+    "persona_version": "1.0",
+    "evaluator_version": "1.0"
+  }
+}

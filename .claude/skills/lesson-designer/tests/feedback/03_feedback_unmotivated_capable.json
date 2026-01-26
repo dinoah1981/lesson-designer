@@ -1,0 +1,71 @@
+{
+  "persona": "unmotivated_capable",
+  "persona_name": "Jordan",
+  "evaluation_date": "2026-01-26",
+  "lesson_title": "Analyzing Primary Sources: Civil War Era",
+  "overall_assessment": {
+    "accessibility_rating": "4/5",
+    "summary": "This lesson is highly accessible for Jordan. Minor adjustments could further support engagement.",
+    "primary_concern": "5 of 5 activities lack clear relevance"
+  },
+  "strengths": [
+    {
+      "element": "cognitive_challenge",
+      "observation": "3 of 5 activities require higher-order thinking",
+      "why_helpful": "Jordan has opportunities for genuine intellectual challenge"
+    },
+    {
+      "element": "student_choice",
+      "observation": "Lesson includes student choice opportunities",
+      "why_helpful": "Jordan can exercise autonomy and approach work in preferred way"
+    },
+    {
+      "element": "autonomy_opportunities",
+      "observation": "Lesson includes opportunities for student autonomy",
+      "why_helpful": "Jordan can exercise agency over learning process"
+    }
+  ],
+  "concerns": [
+    {
+      "element": "task_relevance",
+      "issue": "5 of 5 activities lack clear relevance",
+      "severity": "medium",
+      "impact": "Jordan may complete work minimally without understanding why it matters",
+      "evidence": "Activities without clear relevance: Prior Knowledge Activation, Introduction to Primary Sources, Document Analysis Practice",
+      "recommendation": {
+        "change": "Add explicit \"why this matters\" explanation to each activity",
+        "rationale": "Capable but unmotivated students respond to clear purpose statements",
+        "implementation": "Include 1-2 sentences connecting each task to authentic use or student interests"
+      }
+    },
+    {
+      "element": "real_world_connection",
+      "issue": "Weak or missing connection to real-world application",
+      "severity": "medium",
+      "impact": "Student may question relevance; reduced intrinsic motivation",
+      "evidence": "No explicit real-world framing in activities",
+      "recommendation": {
+        "change": "Add explicit connection showing how skills are used outside classroom",
+        "rationale": "Even brief real-world context increases perceived value",
+        "implementation": "Include example of professional using this skill or current issue requiring it"
+      }
+    }
+  ],
+  "pedagogical_notes": {
+    "overall_difficulty": "Highly accessible - minimal barriers",
+    "priority_revisions": [
+      "task_relevance",
+      "real_world_connection"
+    ],
+    "deferred_to_teacher": [
+      "Content-specific background knowledge needed",
+      "Cultural relevance and student interests",
+      "Specific accommodations beyond general scaffolding"
+    ]
+  },
+  "metadata": {
+    "confidence": "high",
+    "persona_version": "1.0",
+    "evaluator_version": "1.0"
+  }
+}

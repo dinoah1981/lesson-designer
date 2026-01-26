@@ -120,7 +120,7 @@ def run_all_personas(lesson_path: str, output_dir: str, verbose: bool = False) -
             concern_count = len(feedback.get('concerns', []))
             rating = feedback['overall_assessment']['accessibility_rating']
 
-            print(f"  ✓ {concern_count} concerns identified (rating: {rating})")
+            print(f"  [OK] {concern_count} concerns identified (rating: {rating})")
 
             # Store results for summary
             results.append({
@@ -133,7 +133,7 @@ def run_all_personas(lesson_path: str, output_dir: str, verbose: bool = False) -
             })
 
         except Exception as e:
-            print(f"✗ Error evaluating with {persona_id}: {e}")
+            print(f"[ERROR] Error evaluating with {persona_id}: {e}")
             failed_personas.append(persona_id)
             continue
 

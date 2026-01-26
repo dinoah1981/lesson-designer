@@ -1,0 +1,79 @@
+{
+  "persona": "high_achieving",
+  "persona_name": "Marcus",
+  "evaluation_date": "2026-01-26",
+  "lesson_title": "Photosynthesis Vocabulary Quiz Prep",
+  "overall_assessment": {
+    "accessibility_rating": "2/5",
+    "summary": "This lesson poses significant challenges for Marcus. Major revisions needed to ensure accessibility.",
+    "primary_concern": "All tasks at or below grade level with no advanced options"
+  },
+  "strengths": [],
+  "concerns": [
+    {
+      "element": "challenge_level",
+      "issue": "All tasks at or below grade level with no advanced options",
+      "severity": "high",
+      "impact": "Marcus will master content in minutes and have nothing appropriate to do",
+      "evidence": "Grade 10 lesson with no above-level paths or advanced tasks",
+      "recommendation": {
+        "change": "Add above-grade-level options or open-ended advanced challenges",
+        "rationale": "Gifted students (3+ years ahead) need qualitatively different work",
+        "implementation": "Include tasks requiring synthesis, creation, or application to complex scenarios"
+      }
+    },
+    {
+      "element": "pacing_flexibility",
+      "issue": "Limited pacing flexibility for students who master content quickly",
+      "severity": "medium",
+      "impact": "Marcus may finish early and wait; no option to move to advanced content",
+      "evidence": "No explicit curriculum compacting or acceleration options",
+      "recommendation": {
+        "change": "Build in flexible pacing for students who demonstrate early mastery",
+        "rationale": "Respecting gifted students' time shows they are valued",
+        "implementation": "Create \"early finisher\" pathway to substantively different work"
+      }
+    },
+    {
+      "element": "abstract_complexity",
+      "issue": "Limited abstract or theoretical content for advanced reasoners",
+      "severity": "medium",
+      "impact": "Marcus's abstract reasoning abilities underutilized",
+      "evidence": "Lesson stays close to concrete examples without theoretical extension",
+      "recommendation": {
+        "change": "Add \"big picture\" or theoretical extension for interested students",
+        "rationale": "Abstract thinkers benefit from seeing underlying patterns and principles",
+        "implementation": "Include optional theoretical framework or \"what's the general principle?\" discussion"
+      }
+    },
+    {
+      "element": "meaningful_work",
+      "issue": "Majority of work is repetitive practice - meaningless for students who've mastered content",
+      "severity": "high",
+      "impact": "Marcus already understands this; repetition is punishment, not learning",
+      "evidence": "3 of 3 activities are drill/practice: ['Students copy definitions from the board', 'Students quiz each other on definitions', 'Practice quiz matching terms to definitions']",
+      "recommendation": {
+        "change": "Replace repetitive practice with substantive intellectual work for mastery students",
+        "rationale": "Different work (not more work) - gifted students need challenge, not repetition",
+        "implementation": "Offer application to complex scenario, creation task, or analysis instead of drill"
+      }
+    }
+  ],
+  "pedagogical_notes": {
+    "overall_difficulty": "Very challenging - multiple significant barriers",
+    "priority_revisions": [
+      "challenge_level",
+      "meaningful_work"
+    ],
+    "deferred_to_teacher": [
+      "Content-specific background knowledge needed",
+      "Cultural relevance and student interests",
+      "Specific accommodations beyond general scaffolding"
+    ]
+  },
+  "metadata": {
+    "confidence": "high",
+    "persona_version": "1.0",
+    "evaluator_version": "1.0"
+  }
+}

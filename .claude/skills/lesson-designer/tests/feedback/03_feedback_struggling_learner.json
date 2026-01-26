@@ -1,0 +1,83 @@
+{
+  "persona": "struggling_learner_ell",
+  "persona_name": "Alex",
+  "evaluation_date": "2026-01-26",
+  "lesson_title": "Analyzing Primary Sources: Civil War Era",
+  "overall_assessment": {
+    "accessibility_rating": "4/5",
+    "summary": "This lesson is highly accessible for Alex. Minor adjustments could further support engagement.",
+    "primary_concern": "Activity 'Introduction to Primary Sources': 4 steps exceeds Alex's multistep limit (3 steps)"
+  },
+  "strengths": [
+    {
+      "element": "vocabulary",
+      "observation": "5 vocabulary term(s) include explicit definitions",
+      "why_helpful": "Explicit definitions support Alex's vocabulary development and reduce cognitive load during new concept learning"
+    },
+    {
+      "element": "scaffolding",
+      "observation": "Activity 'Document Analysis Practice' includes scaffolding for writing task",
+      "why_helpful": "Models and sentence frames give Alex concrete starting points for academic writing"
+    },
+    {
+      "element": "engagement",
+      "observation": "Lesson incorporates 2 learning modalities",
+      "why_helpful": "Multiple entry points increase engagement for Alex and provide alternative pathways to understanding"
+    }
+  ],
+  "concerns": [
+    {
+      "element": "instruction_clarity",
+      "issue": "Activity 'Introduction to Primary Sources': 4 steps exceeds Alex's multistep limit (3 steps)",
+      "severity": "medium",
+      "impact": "Alex may forget earlier steps or lose track of the overall task goal",
+      "evidence": "Instructions have 4 steps: Define 'primary source' as a firsthand account from the time of an event; Identify types of primary sources: letters, diaries, photographs, official documents; Contrast with secondary sources: textbooks, encyclopedias, documentaries...",
+      "recommendation": {
+        "change": "Add visual checklist or break into smaller sub-tasks",
+        "rationale": "Struggling learners benefit from chunked tasks with visual progress tracking",
+        "implementation": "Create a numbered checklist graphic organizer with checkbox for each step"
+      }
+    },
+    {
+      "element": "instruction_clarity",
+      "issue": "Activity 'Document Analysis Practice': 4 steps exceeds Alex's multistep limit (3 steps)",
+      "severity": "medium",
+      "impact": "Alex may forget earlier steps or lose track of the overall task goal",
+      "evidence": "Instructions have 4 steps: Read the provided Civil War letter carefully; Identify who wrote it, when, and to whom; Note the author's perspective and potential biases...",
+      "recommendation": {
+        "change": "Add visual checklist or break into smaller sub-tasks",
+        "rationale": "Struggling learners benefit from chunked tasks with visual progress tracking",
+        "implementation": "Create a numbered checklist graphic organizer with checkbox for each step"
+      }
+    },
+    {
+      "element": "instruction_clarity",
+      "issue": "Activity 'Evaluating Historical Claims': 4 steps exceeds Alex's multistep limit (3 steps)",
+      "severity": "medium",
+      "impact": "Alex may forget earlier steps or lose track of the overall task goal",
+      "evidence": "Instructions have 4 steps: Identify 2-3 historical claims made in the primary source; Evaluate the evidence supporting each claim; Rate the reliability of each claim (strong/moderate/weak)...",
+      "recommendation": {
+        "change": "Add visual checklist or break into smaller sub-tasks",
+        "rationale": "Struggling learners benefit from chunked tasks with visual progress tracking",
+        "implementation": "Create a numbered checklist graphic organizer with checkbox for each step"
+      }
+    }
+  ],
+  "pedagogical_notes": {
+    "overall_difficulty": "Moderately accessible - several minor barriers",
+    "priority_revisions": [
+      "instruction_clarity",
+      "instruction_clarity"
+    ],
+    "deferred_to_teacher": [
+      "Content-specific background knowledge needed",
+      "Cultural relevance and student interests",
+      "Specific accommodations beyond general scaffolding"
+    ]
+  },
+  "metadata": {
+    "confidence": "high",
+    "persona_version": "1.0",
+    "evaluator_version": "1.0"
+  }
+}
