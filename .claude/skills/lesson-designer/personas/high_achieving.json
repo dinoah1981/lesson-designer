@@ -1,0 +1,86 @@
+{
+  "persona_id": "high_achieving",
+  "persona_name": "Marcus",
+  "description": "9th grade gifted student (140 IQ equivalent) who quickly masters grade-level content and needs advanced challenges",
+  "characteristics": {
+    "cognitive_ability": {
+      "grade_equivalent": "12+",
+      "actual_grade": "9",
+      "gap_years": 3,
+      "rapid_mastery": true,
+      "advanced_reasoning": true,
+      "pattern_recognition": "excellent",
+      "abstract_thinking": "exceptional"
+    },
+    "motivation": {
+      "achievement_oriented": true,
+      "perfectionist_tendencies": true,
+      "frustrated_by_slow_pace": true,
+      "needs_challenge": true,
+      "task_commitment_when_interested": "exceptional"
+    },
+    "engagement": {
+      "disengages_when_bored": true,
+      "excels_with_complexity": true,
+      "peer_interaction_varies": true,
+      "prefers_autonomy": true,
+      "frustrated_by_repetition": true
+    },
+    "learning_needs": {
+      "curriculum_compacting": true,
+      "acceleration_ready": true,
+      "abstract_concepts_preferred": true,
+      "real_problems_valued": true,
+      "needs_different_work_not_more_work": true
+    }
+  },
+  "evaluation_criteria": [
+    "challenge_level",
+    "pacing_flexibility",
+    "abstract_complexity",
+    "ceiling_removal",
+    "meaningful_work"
+  ],
+  "decision_rules": {
+    "challenge": {
+      "rule": "Flag tasks that are too easy or lack appropriate cognitive demand for gifted learners",
+      "severity_thresholds": {
+        "high": "All tasks at grade level with no above-level options; gifted student will master in minutes",
+        "medium": "Some advanced tasks offered but still capped at grade level+1; insufficient challenge",
+        "low": "Advanced options exist but not sufficiently challenging for 3+ year gap students"
+      }
+    },
+    "pacing": {
+      "rule": "Flag rigid pacing that forces gifted students to wait or repeat content already mastered",
+      "severity_thresholds": {
+        "high": "Lock-step instruction where everyone moves together; gifted students waiting 80%+ of class time",
+        "medium": "Some flexibility but gifted students still waiting frequently; limited pre-assessment",
+        "low": "Flexibility exists but not for content acceleration or curriculum compacting"
+      }
+    },
+    "abstract": {
+      "rule": "Flag lessons that are exclusively concrete/practical without theoretical or abstract extensions",
+      "severity_thresholds": {
+        "high": "All concrete examples with no theoretical framework, patterns, or abstract extension",
+        "medium": "Some abstraction but stays close to examples; no independent theoretical work",
+        "low": "Abstraction available but teacher-led only; students not generating abstractions"
+      }
+    },
+    "ceiling": {
+      "rule": "Flag tasks with capped expectations that prevent unlimited exploration or mastery",
+      "severity_thresholds": {
+        "high": "Fixed task ('complete these 10 problems') with no option for deeper/broader work",
+        "medium": "Extensions available but feel like busywork ('do 5 more of the same'); horizontal not vertical",
+        "low": "Ceiling exists but reasonable extension paths available for interested students"
+      }
+    },
+    "meaningful": {
+      "rule": "Flag repetitive practice or busywork without substantive new intellectual work",
+      "severity_thresholds": {
+        "high": "Practice identical to what was demonstrated (drill and kill); pure repetition for mastery students",
+        "medium": "Some variation in practice but fundamentally same work; not building new understanding",
+        "low": "Work is meaningful overall but could be more substantive for gifted (e.g., fewer problems with more complexity)"
+      }
+    }
+  }
+}
