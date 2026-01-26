@@ -77,6 +77,157 @@ def prioritize_revisions(concerns: List[Dict]) -> List[Dict]:
     return prioritized
 
 
+def detect_conflicts(all_concerns: List[Dict]) -> List[Dict]:
+    """
+    Identify conflicting recommendations across personas.
+
+    Conflicts occur when:
+    - Same element gets opposite recommendations (add scaffolding vs reduce scaffolding)
+    - Persona needs are inherently opposing (struggling needs support, high-achieving needs less)
+
+    Returns:
+        List of conflict objects with resolution strategies
+    """
+    conflicts = []
+
+    # Group concerns by element
+    by_element = {}
+    for concern in all_concerns:
+        element = concern['element']
+        if element not in by_element:
+            by_element[element] = []
+        by_element[element].append(concern)
+
+    # Check each element for conflicts
+    for element, concerns in by_element.items():
+        if len(concerns) < 2:
+            continue
+
+        # Check for scaffolding vs. challenge conflict
+        struggling_concerns = [c for c in concerns if c.get('persona_id') == 'struggling_learner_ell']
+        high_achieving_concerns = [c for c in concerns if c.get('persona_id') == 'high_achieving']
+
+        has_add_scaffold = any(
+            'add' in c.get('recommendation', {}).get('change', '').lower() and
+            ('scaffold' in c.get('recommendation', {}).get('change', '').lower() or
+             'support' in c.get('recommendation', {}).get('change', '').lower())
+            for c in struggling_concerns
+        )
+
+        has_reduce_complexity = any(
+            any(word in c.get('recommendation', {}).get('change', '').lower()
+                for word in ['reduce', 'remove', 'simplify', 'less'])
+            for c in high_achieving_concerns
+        )
+
+        if has_add_scaffold and has_reduce_complexity:
+            conflicts.append({
+                'element': element,
+                'type': 'scaffolding_vs_challenge',
+                'personas_involved': ['struggling_learner_ell', 'high_achieving'],
+                'struggling_recommendation': struggling_concerns[0] if struggling_concerns else None,
+                'high_achieving_recommendation': high_achieving_concerns[0] if high_achieving_concerns else None,
+                'resolution_strategy': 'tiered_support',
+                'teacher_note': 'Provide scaffolded version for struggling learners, challenge version for advanced students. Both groups maintain same learning objective.'
+            })
+
+    return conflicts
+
+
+def find_agreements(all_concerns: List[Dict], threshold: int = 3) -> List[Dict]:
+    """
+    Find recommendations where multiple personas agree.
+
+    Args:
+        all_concerns: All concerns from all personas
+        threshold: Minimum number of personas that must agree (default: 3 of 4)
+
+    Returns:
+        List of concerns that are universally supported
+    """
+    # Group by element and similar recommendation patterns
+    similar_groups = {}
+
+    for concern in all_concerns:
+        element = concern['element']
+        change_text = concern.get('recommendation', {}).get('change', '')
+
+        # Create grouping key from element and recommendation type (first 50 chars)
+        key = f"{element}:{change_text[:50]}"
+
+        if key not in similar_groups:
+            similar_groups[key] = []
+        similar_groups[key].append(concern)
+
+    # Find groups meeting threshold
+    agreements = []
+    for key, group in similar_groups.items():
+        persona_ids = set(c.get('persona_id', '') for c in group)
+        if len(persona_ids) >= threshold:
+            # Create synthesized concern
+            agreements.append({
+                'element': group[0]['element'],
+                'severity': max((c.get('severity', 'medium') for c in group),
+                               key=lambda s: {'high': 3, 'medium': 2, 'low': 1}.get(s, 0)),
+                'issue': group[0]['issue'],
+                'recommendation': group[0]['recommendation'],
+                'personas_agreeing': [c.get('persona_name', '') for c in group],
+                'agreement_count': len(persona_ids),
+                'priority': 'universal'
+            })
+
+    return agreements
+
+
+def synthesize_feedback(all_concerns: List[Dict]) -> Dict[str, Any]:
+    """
+    Combine concerns from all personas into categorized revision plan.
+
+    Categories:
+    - universal_improvements: 3+ personas agree (highest priority)
+    - accessibility_critical: Struggling learner high severity concerns
+    - engagement_enhancements: Unmotivated/interested persona recommendations
+    - challenge_extensions: High-achieving persona recommendations
+    - conflicting_recommendations: Require teacher decision with resolution strategies
+
+    Returns:
+        Categorized feedback dictionary
+    """
+    universal = find_agreements(all_concerns, threshold=3)
+    conflicts = detect_conflicts(all_concerns)
+
+    # Filter by persona for non-universal concerns
+    def filter_by_persona(concerns, persona_ids, severity=None):
+        if isinstance(persona_ids, str):
+            persona_ids = [persona_ids]
+        filtered = [c for c in concerns if c.get('persona_id') in persona_ids]
+        if severity:
+            filtered = [c for c in filtered if c.get('severity') == severity]
+        return filtered
+
+    # Get concerns already handled by universal or conflicts
+    universal_elements = set(c['element'] for c in universal)
+    conflict_elements = set(c['element'] for c in conflicts)
+    handled = universal_elements | conflict_elements
+
+    # Filter remaining concerns
+    remaining = [c for c in all_concerns if c['element'] not in handled]
+
+    return {
+        'universal_improvements': universal,
+        'accessibility_critical': filter_by_persona(remaining, 'struggling_learner_ell', 'high'),
+        'engagement_enhancements': filter_by_persona(remaining, ['unmotivated_capable', 'interested_capable']),
+        'challenge_extensions': filter_by_persona(remaining, 'high_achieving'),
+        'conflicting_recommendations': conflicts,
+        'metadata': {
+            'total_concerns': len(all_concerns),
+            'universal_count': len(universal),
+            'conflicts_count': len(conflicts),
+            'personas_analyzed': list(set(c.get('persona_id', '') for c in all_concerns))
+        }
+    }
+
+
 def generate_revision_plan(lesson_path: str, feedback_paths: List[str], output_path: str) -> Dict[str, Any]:
     """
     Create structured revision plan with specific changes.
@@ -101,54 +252,70 @@ def generate_revision_plan(lesson_path: str, feedback_paths: List[str], output_p
     # Prioritize by severity
     prioritized = prioritize_revisions(all_concerns)
 
-    # Structure into categories
-    critical_changes = []
-    optional_improvements = []
-    requires_teacher_decision = []
+    # Multi-persona mode vs single-persona mode
+    if len(feedback_paths) > 1:
+        # Multi-persona mode: Use synthesis categories
+        synthesis = synthesize_feedback(all_concerns)
 
-    change_id_counter = 1
-
-    for concern in prioritized:
-        # Create change object with implementation details
-        change = {
-            'id': f"change_{change_id_counter:03d}",
-            'element': concern['element'],
-            'severity': concern['severity'],
-            'status': 'pending',
-            'current_state': concern['issue'],
-            'proposed_change': concern['recommendation']['change'],
-            'rationale': concern['recommendation']['rationale'],
-            'impact_if_not_addressed': concern.get('impact', ''),
-            'persona_source': concern['persona_name'],
-            'implementation': _generate_implementation_object(concern),
-            'teacher_notes': ''
+        # Build revision plan with synthesis structure
+        revision_plan = {
+            'lesson_title': lesson.get('title', 'Untitled Lesson'),
+            'generated_date': datetime.now().strftime('%Y-%m-%d'),
+            'personas_consulted': [p['persona_name'] for p in personas_consulted],
+            'mode': 'multi_persona',
+            'synthesis': synthesis,
+            'metadata': synthesis['metadata']
         }
+    else:
+        # Single-persona mode: Keep existing severity-based categorization
+        # Structure into categories
+        critical_changes = []
+        optional_improvements = []
+        requires_teacher_decision = []
 
-        # Categorize by severity
-        if concern['severity'] == 'high':
-            critical_changes.append(change)
-        elif concern['severity'] == 'medium':
-            optional_improvements.append(change)
-        else:
-            requires_teacher_decision.append(change)
+        change_id_counter = 1
 
-        change_id_counter += 1
+        for concern in prioritized:
+            # Create change object with implementation details
+            change = {
+                'id': f"change_{change_id_counter:03d}",
+                'element': concern['element'],
+                'severity': concern['severity'],
+                'status': 'pending',
+                'current_state': concern['issue'],
+                'proposed_change': concern['recommendation']['change'],
+                'rationale': concern['recommendation']['rationale'],
+                'impact_if_not_addressed': concern.get('impact', ''),
+                'persona_source': concern['persona_name'],
+                'implementation': _generate_implementation_object(concern),
+                'teacher_notes': ''
+            }
 
-    # Build revision plan
-    revision_plan = {
-        'lesson_title': lesson.get('title', 'Untitled Lesson'),
-        'generated_date': datetime.now().strftime('%Y-%m-%d'),
-        'personas_consulted': [p['persona_name'] for p in personas_consulted],
-        'critical_changes': critical_changes,
-        'optional_improvements': optional_improvements,
-        'requires_teacher_decision': requires_teacher_decision,
-        'metadata': {
-            'total_changes': len(critical_changes) + len(optional_improvements) + len(requires_teacher_decision),
-            'critical_count': len(critical_changes),
-            'optional_count': len(optional_improvements),
-            'low_priority_count': len(requires_teacher_decision)
+            # Categorize by severity
+            if concern['severity'] == 'high':
+                critical_changes.append(change)
+            elif concern['severity'] == 'medium':
+                optional_improvements.append(change)
+            else:
+                requires_teacher_decision.append(change)
+
+            change_id_counter += 1
+
+        # Build revision plan
+        revision_plan = {
+            'lesson_title': lesson.get('title', 'Untitled Lesson'),
+            'generated_date': datetime.now().strftime('%Y-%m-%d'),
+            'personas_consulted': [p['persona_name'] for p in personas_consulted],
+            'critical_changes': critical_changes,
+            'optional_improvements': optional_improvements,
+            'requires_teacher_decision': requires_teacher_decision,
+            'metadata': {
+                'total_changes': len(critical_changes) + len(optional_improvements) + len(requires_teacher_decision),
+                'critical_count': len(critical_changes),
+                'optional_count': len(optional_improvements),
+                'low_priority_count': len(requires_teacher_decision)
+            }
         }
-    }
 
     # Save revision plan JSON
     with open(output_path, 'w') as f:
@@ -281,11 +448,112 @@ def render_revision_markdown(revision_plan: Dict[str, Any], lesson: Dict[str, An
     metadata = revision_plan['metadata']
     md_lines.append('## Summary')
     md_lines.append('')
-    md_lines.append(f"{metadata['total_changes']} concerns identified, {metadata['critical_count']} critical")
-    md_lines.append('')
 
-    # Critical Changes
-    if revision_plan['critical_changes']:
+    # Check for multi-persona synthesis mode
+    if 'synthesis' in revision_plan:
+        synthesis = revision_plan['synthesis']
+        md_lines.append(f"{metadata['total_concerns']} concerns identified across {len(metadata['personas_analyzed'])} personas")
+        md_lines.append('')
+
+        # Universal Improvements (highest priority - 3+ personas agree)
+        if synthesis.get('universal_improvements'):
+            md_lines.append('## Universal Improvements (3+ PERSONAS AGREE)')
+            md_lines.append('')
+            md_lines.append('*These changes are recommended by multiple personas and should be prioritized.*')
+            md_lines.append('')
+
+            for i, change in enumerate(synthesis['universal_improvements'], 1):
+                md_lines.append(f"### {i}. {change['element']}")
+                md_lines.append('')
+                md_lines.append(f"**Issue:** {change['issue']}")
+                md_lines.append(f"**Proposed Change:** {change['recommendation']['change']}")
+                md_lines.append(f"**Personas Agreeing:** {', '.join(change['personas_agreeing'])}")
+                md_lines.append('')
+                md_lines.append('- [ ] Approve')
+                md_lines.append('- [ ] Skip')
+                md_lines.append('')
+
+        # Accessibility Critical (struggling learner high severity)
+        if synthesis.get('accessibility_critical'):
+            md_lines.append('## Accessibility Critical (BARRIERS FOR STRUGGLING LEARNERS)')
+            md_lines.append('')
+
+            for i, change in enumerate(synthesis['accessibility_critical'], 1):
+                md_lines.append(f"### {i}. {change['element']}")
+                md_lines.append('')
+                md_lines.append(f"**Issue:** {change['issue']}")
+                md_lines.append(f"**Proposed Change:** {change['recommendation']['change']}")
+                md_lines.append(f"**Rationale:** {change['recommendation']['rationale']}")
+                md_lines.append('')
+                md_lines.append('- [ ] Approve')
+                md_lines.append('- [ ] Skip')
+                md_lines.append('')
+
+        # Engagement Enhancements
+        if synthesis.get('engagement_enhancements'):
+            md_lines.append('## Engagement Enhancements (MOTIVATION/INTEREST)')
+            md_lines.append('')
+
+            for i, change in enumerate(synthesis['engagement_enhancements'], 1):
+                md_lines.append(f"### {i}. {change['element']}")
+                md_lines.append('')
+                md_lines.append(f"**Issue:** {change['issue']}")
+                md_lines.append(f"**Proposed Change:** {change['recommendation']['change']}")
+                md_lines.append(f"**Persona:** {change['persona_name']}")
+                md_lines.append('')
+                md_lines.append('- [ ] Approve')
+                md_lines.append('- [ ] Skip')
+                md_lines.append('')
+
+        # Challenge Extensions
+        if synthesis.get('challenge_extensions'):
+            md_lines.append('## Challenge Extensions (HIGH-ACHIEVING NEEDS)')
+            md_lines.append('')
+
+            for i, change in enumerate(synthesis['challenge_extensions'], 1):
+                md_lines.append(f"### {i}. {change['element']}")
+                md_lines.append('')
+                md_lines.append(f"**Issue:** {change['issue']}")
+                md_lines.append(f"**Proposed Change:** {change['recommendation']['change']}")
+                md_lines.append('')
+                md_lines.append('- [ ] Approve')
+                md_lines.append('- [ ] Skip')
+                md_lines.append('')
+
+        # Conflicting Recommendations (require teacher decision)
+        if synthesis.get('conflicting_recommendations'):
+            md_lines.append('## Conflicting Recommendations (REQUIRE TEACHER DECISION)')
+            md_lines.append('')
+            md_lines.append('*These recommendations conflict across personas. Review resolution strategies.*')
+            md_lines.append('')
+
+            for i, conflict in enumerate(synthesis['conflicting_recommendations'], 1):
+                md_lines.append(f"### Conflict {i}: {conflict['element']}")
+                md_lines.append('')
+                md_lines.append(f"**Type:** {conflict['type']}")
+                md_lines.append(f"**Personas Involved:** {', '.join(conflict['personas_involved'])}")
+                md_lines.append('')
+                if conflict.get('struggling_recommendation'):
+                    md_lines.append(f"**Struggling Learner Says:** {conflict['struggling_recommendation'].get('recommendation', {}).get('change', 'N/A')}")
+                if conflict.get('high_achieving_recommendation'):
+                    md_lines.append(f"**High Achiever Says:** {conflict['high_achieving_recommendation'].get('recommendation', {}).get('change', 'N/A')}")
+                md_lines.append('')
+                md_lines.append(f"**Resolution Strategy:** `{conflict['resolution_strategy']}`")
+                md_lines.append(f"**Teacher Note:** {conflict['teacher_note']}")
+                md_lines.append('')
+                md_lines.append('**Teacher Decision:**')
+                md_lines.append('- [ ] Use tiered support (scaffolded + challenge versions)')
+                md_lines.append('- [ ] Use core + extension model')
+                md_lines.append('- [ ] Create optional paths')
+                md_lines.append('- [ ] Other: ___')
+                md_lines.append('')
+    else:
+        # Single-persona mode: Use existing severity-based rendering
+        md_lines.append(f"{metadata['total_changes']} concerns identified, {metadata['critical_count']} critical")
+        md_lines.append('')
+
+    # Critical Changes (only for single-persona mode)
+    if 'synthesis' not in revision_plan and revision_plan['critical_changes']:
         md_lines.append('## Critical Changes (RECOMMENDED)')
         md_lines.append('')
 
@@ -310,8 +578,8 @@ def render_revision_markdown(revision_plan: Dict[str, Any], lesson: Dict[str, An
             md_lines.append('- [ ] Reject (reason: ___)')
             md_lines.append('')
 
-    # Optional Improvements
-    if revision_plan['optional_improvements']:
+    # Optional Improvements (only for single-persona mode)
+    if 'synthesis' not in revision_plan and revision_plan['optional_improvements']:
         md_lines.append('## Optional Improvements (CONSIDER)')
         md_lines.append('')
 
@@ -333,8 +601,8 @@ def render_revision_markdown(revision_plan: Dict[str, Any], lesson: Dict[str, An
             md_lines.append('- [ ] Skip')
             md_lines.append('')
 
-    # Requires Teacher Context
-    if revision_plan['requires_teacher_decision']:
+    # Requires Teacher Context (only for single-persona mode)
+    if 'synthesis' not in revision_plan and revision_plan['requires_teacher_decision']:
         md_lines.append('## Requires Teacher Context (LOW PRIORITY)')
         md_lines.append('')
 
@@ -352,11 +620,23 @@ def render_revision_markdown(revision_plan: Dict[str, Any], lesson: Dict[str, An
     # Approval Summary
     md_lines.append('## Approval Summary')
     md_lines.append('')
-    md_lines.append(f"**Critical changes requiring approval:** {metadata['critical_count']}")
 
-    # Estimate time impact
-    time_estimate = metadata['critical_count'] * 3 + metadata['optional_count'] * 2
-    md_lines.append(f"**Estimated time impact:** +{time_estimate} minutes")
+    if 'synthesis' in revision_plan:
+        # Multi-persona summary
+        synthesis = revision_plan['synthesis']
+        total_changes = (len(synthesis.get('universal_improvements', [])) +
+                        len(synthesis.get('accessibility_critical', [])) +
+                        len(synthesis.get('engagement_enhancements', [])) +
+                        len(synthesis.get('challenge_extensions', [])))
+        md_lines.append(f"**Total changes requiring review:** {total_changes}")
+        md_lines.append(f"**Conflicts requiring teacher decision:** {len(synthesis.get('conflicting_recommendations', []))}")
+    else:
+        # Single-persona summary
+        md_lines.append(f"**Critical changes requiring approval:** {metadata['critical_count']}")
+        # Estimate time impact
+        time_estimate = metadata['critical_count'] * 3 + metadata['optional_count'] * 2
+        md_lines.append(f"**Estimated time impact:** +{time_estimate} minutes")
+
     md_lines.append('')
 
     # Write to file
