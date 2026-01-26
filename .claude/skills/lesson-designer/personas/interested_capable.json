@@ -1,0 +1,85 @@
+{
+  "persona_id": "interested_capable",
+  "persona_name": "Maya",
+  "description": "11th grade student with strong academic skills and genuine interest in learning, seeks depth and exploration",
+  "characteristics": {
+    "cognitive_ability": {
+      "grade_equivalent": "12",
+      "actual_grade": "11",
+      "gap_years": 1,
+      "processes_complex_tasks": true,
+      "abstract_thinking": "strong",
+      "critical_analysis": "high"
+    },
+    "motivation": {
+      "intrinsic_motivation": "high",
+      "curiosity": "high",
+      "task_persistence": "high",
+      "seeks_understanding": true,
+      "goal_oriented": true
+    },
+    "engagement": {
+      "participates_actively": true,
+      "asks_questions": true,
+      "goes_beyond_requirements": true,
+      "wants_depth": true,
+      "frustrated_by_surface_level": true
+    },
+    "learning_style": {
+      "prefers_inquiry": true,
+      "enjoys_discussion": true,
+      "likes_research": true,
+      "self_directed": true,
+      "values_peer_collaboration": true
+    }
+  },
+  "evaluation_criteria": [
+    "depth_opportunities",
+    "inquiry_support",
+    "discussion_quality",
+    "extension_availability",
+    "intellectual_rigor"
+  ],
+  "decision_rules": {
+    "depth": {
+      "rule": "Flag surface-level content without opportunities for deeper exploration or analysis",
+      "severity_thresholds": {
+        "high": "Single 'right answer' tasks with no room for deeper analysis or multiple perspectives",
+        "medium": "Some depth present but exploration capped by task design; no paths to go deeper",
+        "low": "Good depth in core activity but no explicit extension paths for interested students"
+      }
+    },
+    "inquiry": {
+      "rule": "Flag lessons that don't encourage or structure student-generated questions",
+      "severity_thresholds": {
+        "high": "Entirely receptive learning; students never generate their own questions or lines of inquiry",
+        "medium": "Limited question opportunities (only Q&A at end); questions not integrated into learning",
+        "low": "Questions welcomed but not explicitly structured into activities or protocols"
+      }
+    },
+    "discussion": {
+      "rule": "Flag activities that don't leverage substantive peer-to-peer academic discourse",
+      "severity_thresholds": {
+        "high": "No collaborative or discussion components; entirely individual work",
+        "medium": "Discussion present but shallow (share answers only); no building on ideas or debate",
+        "low": "Discussion exists but prompts could be more substantive or push deeper thinking"
+      }
+    },
+    "extension": {
+      "rule": "Flag lessons without meaningful paths for advanced or extended work beyond basics",
+      "severity_thresholds": {
+        "high": "All students do identical work regardless of mastery or interest; no differentiation",
+        "medium": "Extensions mentioned ('if you finish early...') but not genuinely planned or compelling",
+        "low": "Extensions available but not intellectually rich; feel like 'more of the same'"
+      }
+    },
+    "rigor": {
+      "rule": "Flag activities below students' intellectual capacity or lacking cognitive complexity",
+      "severity_thresholds": {
+        "high": "Only retrieval and basic comprehension tasks; no analysis, evaluation, or creation",
+        "medium": "Analysis present but routine or formulaic (fill-in-the-blank analysis); low cognitive demand",
+        "low": "Good rigor in core activities but could push further for capable students"
+      }
+    }
+  }
+}
