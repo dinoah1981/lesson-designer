@@ -25,6 +25,9 @@ from docx.oxml.ns import qn
 from docx.oxml import OxmlElement
 
 
+# Default font for all documents
+DEFAULT_FONT = 'Helvetica'
+
 # Performance levels for rubrics
 PERFORMANCE_LEVELS = [
     ("Advanced", 4, "Exceeds expectations"),
@@ -32,6 +35,15 @@ PERFORMANCE_LEVELS = [
     ("Developing", 2, "Approaching expectations"),
     ("Beginning", 1, "Below expectations")
 ]
+
+
+def create_document_with_font() -> Document:
+    """Create a new document with default Helvetica font."""
+    doc = Document()
+    style = doc.styles['Normal']
+    style.font.name = DEFAULT_FONT
+    style._element.rPr.rFonts.set(qn('w:eastAsia'), DEFAULT_FONT)
+    return doc
 
 
 def set_cell_shading(cell, color: str):
@@ -136,7 +148,7 @@ def generate_short_answer_section(doc: Document, questions: List[Dict], start_nu
         # Answer lines with double spacing
         lines = q.get('lines', 4)
         for _ in range(lines):
-            answer_line = doc.add_paragraph("_" * 100)
+            answer_line = doc.add_paragraph("_" * 120)
             answer_line.paragraph_format.line_spacing = 2.0
             answer_line.paragraph_format.space_after = Pt(3)
             for run in answer_line.runs:
@@ -184,7 +196,7 @@ def generate_essay_section(doc: Document, questions: List[Dict], start_num: int 
         # Answer space - use "Continue on back if needed"
         doc.add_paragraph()
         for _ in range(10):
-            answer_line = doc.add_paragraph("_" * 100)
+            answer_line = doc.add_paragraph("_" * 120)
             answer_line.paragraph_format.line_spacing = 2.0
             answer_line.paragraph_format.space_after = Pt(2)
 
@@ -200,7 +212,7 @@ def generate_essay_section(doc: Document, questions: List[Dict], start_num: int 
 
 def generate_quiz(assessment_data: Dict, output_path: str) -> bool:
     """Generate quiz document."""
-    doc = Document()
+    doc = create_document_with_font()
 
     # Set margins
     for section in doc.sections:
@@ -230,7 +242,7 @@ def generate_quiz(assessment_data: Dict, output_path: str) -> bool:
 
 def generate_test(assessment_data: Dict, output_path: str) -> bool:
     """Generate test document (more comprehensive than quiz)."""
-    doc = Document()
+    doc = create_document_with_font()
 
     # Set margins
     for section in doc.sections:
@@ -330,7 +342,7 @@ def create_performance_rubric(doc: Document, task_name: str, criteria: List[Dict
 
 def generate_performance_task(assessment_data: Dict, output_path: str) -> bool:
     """Generate performance task with rubric."""
-    doc = Document()
+    doc = create_document_with_font()
 
     # Set margins
     for section in doc.sections:
@@ -367,7 +379,7 @@ def generate_performance_task(assessment_data: Dict, output_path: str) -> bool:
     workspace_note.runs[0].font.size = Pt(10)
 
     for _ in range(15):
-        line = doc.add_paragraph("_" * 100)
+        line = doc.add_paragraph("_" * 120)
         line.paragraph_format.line_spacing = 2.0
 
     doc.save(output_path)
@@ -376,7 +388,7 @@ def generate_performance_task(assessment_data: Dict, output_path: str) -> bool:
 
 def generate_socratic_guide(assessment_data: Dict, output_path: str) -> bool:
     """Generate Socratic discussion guide with facilitation notes and rubric."""
-    doc = Document()
+    doc = create_document_with_font()
 
     # Set margins
     for section in doc.sections:
@@ -459,19 +471,19 @@ def generate_socratic_guide(assessment_data: Dict, output_path: str) -> bool:
     doc.add_paragraph()
     doc.add_paragraph("My initial response to the essential question:")
     for _ in range(4):
-        line = doc.add_paragraph("_" * 100)
+        line = doc.add_paragraph("_" * 120)
         line.paragraph_format.line_spacing = 2.0
 
     doc.add_paragraph()
     doc.add_paragraph("Evidence from the text I want to reference:")
     for _ in range(4):
-        line = doc.add_paragraph("_" * 100)
+        line = doc.add_paragraph("_" * 120)
         line.paragraph_format.line_spacing = 2.0
 
     doc.add_paragraph()
     doc.add_paragraph("Questions I have for my peers:")
     for _ in range(3):
-        line = doc.add_paragraph("_" * 100)
+        line = doc.add_paragraph("_" * 120)
         line.paragraph_format.line_spacing = 2.0
 
     doc.save(output_path)
@@ -480,7 +492,7 @@ def generate_socratic_guide(assessment_data: Dict, output_path: str) -> bool:
 
 def generate_answer_key(assessment_data: Dict, output_path: str) -> bool:
     """Generate answer key for quiz/test."""
-    doc = Document()
+    doc = create_document_with_font()
 
     # Set margins
     for section in doc.sections:
