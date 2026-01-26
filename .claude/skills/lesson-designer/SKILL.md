@@ -714,104 +714,73 @@ RESULT: PASSED WITH WARNINGS
 
 ---
 
-### Stage 3.5: Persona Feedback & Revision
+### Stage 3.5: Multi-Persona Feedback (Optional)
 
-**Purpose:** Evaluate lesson design through struggling learner persona and apply teacher-approved revisions before generating materials.
+Run the lesson design through 4 diverse student personas to identify accessibility barriers, engagement issues, and ceiling limitations.
 
-**Inputs:**
-- Validated lesson design from Stage 3b (`04_lesson_final.json`)
-- Persona definition (`.claude/skills/lesson-designer/personas/struggling_learner.json`)
+**Personas:**
+1. **Alex (Struggling/ELL)** - Reading 2-3 years below grade level, vocabulary gaps
+2. **Jordan (Unmotivated Capable)** - High ability, low engagement, needs relevance
+3. **Maya (Interested Capable)** - High ability, high engagement, wants depth
+4. **Marcus (High Achieving)** - Gifted learner, rapid mastery, needs challenge
 
-**Process:**
-
-#### Step 1: Run Persona Evaluation
+**Step 1: Run Multi-Persona Evaluation**
 
 ```bash
-python .claude/skills/lesson-designer/scripts/persona_evaluator.py \
+python .claude/skills/lesson-designer/scripts/run_multi_persona.py \
     .lesson-designer/sessions/{session_id}/04_lesson_final.json \
-    .claude/skills/lesson-designer/personas/struggling_learner.json \
-    .lesson-designer/sessions/{session_id}/03_feedback_struggling_learner.json
+    .lesson-designer/sessions/{session_id}/
 ```
 
-This produces structured feedback JSON with:
-- Accessibility rating (1-5 scale)
-- Strengths (what works well for struggling learners)
-- Concerns (issues with severity ratings)
-- Recommendations (specific changes with rationale)
+Output: 4 feedback files
+- `03_feedback_struggling_learner_ell.json`
+- `03_feedback_unmotivated_capable.json`
+- `03_feedback_interested_capable.json`
+- `03_feedback_high_achieving.json`
 
-#### Step 2: Generate Revision Plan
+**Step 2: Generate Synthesized Revision Plan**
 
 ```bash
 python .claude/skills/lesson-designer/scripts/generate_revision_plan.py \
-    .lesson-designer/sessions/{session_id}/03_feedback_struggling_learner.json \
-    .lesson-designer/sessions/{session_id}/03_revision_plan.json \
-    --markdown .lesson-designer/sessions/{session_id}/03_revision_plan.md
+    "03_feedback_struggling_learner_ell.json,03_feedback_unmotivated_capable.json,03_feedback_interested_capable.json,03_feedback_high_achieving.json" \
+    03_revision_plan.json \
+    --lesson 04_lesson_final.json \
+    --markdown 03_revision_plan.md
 ```
 
-This produces:
-- `03_revision_plan.json` - Structured revision plan
-- `03_revision_plan.md` - Teacher-readable revision plan
+Output: Revision plan with synthesis categories:
+- **Universal Improvements** - 3+ personas agree (highest priority)
+- **Accessibility Critical** - Struggling learner barriers
+- **Engagement Enhancements** - Motivation/interest suggestions
+- **Challenge Extensions** - High-achieving needs
+- **Conflicting Recommendations** - Require teacher decision
 
-#### Step 3: Present Revision Plan to Teacher
+**Step 3: Teacher Review**
 
-Present the Markdown revision plan to the teacher with this format:
+Present `03_revision_plan.md` to teacher for approval.
 
-```
-Based on struggling learner feedback, I've identified {N} recommended changes to improve accessibility.
+Conflict resolution strategies:
+- **Tiered Support**: Scaffolded version for struggling + challenge version for advanced
+- **Core + Extension**: All students do core, capable students extend
+- **Optionality**: Multiple paths to same learning goal
 
-[Show 03_revision_plan.md content]
+**Step 4: Apply Revisions**
 
-Do you approve the critical changes?
-1. {Change 1 summary}
-2. {Change 2 summary}
-
-Reply "approve all" or specify which changes to approve/reject.
-```
-
-Wait for teacher response before proceeding.
-
-#### Step 4: Apply Approved Revisions
-
-If teacher approves changes:
-
-```python
-from generate_revision_plan import apply_revisions
-
-apply_revisions(
-    lesson_path='.lesson-designer/sessions/{session_id}/04_lesson_final.json',
-    revision_plan_path='.lesson-designer/sessions/{session_id}/03_revision_plan.json',
-    output_path='.lesson-designer/sessions/{session_id}/04_lesson_final.json'  # Overwrites with revised version
-)
+```bash
+python .claude/skills/lesson-designer/scripts/generate_revision_plan.py \
+    --apply \
+    --lesson 04_lesson_final.json \
+    --revision-plan 03_revision_plan.json \
+    --output 04_lesson_revised.json
 ```
 
-If teacher rejects all changes, proceed with original lesson design.
-
-#### Step 5: Log Revision Decision
-
-Update `03_revision_plan.json` with teacher decisions:
-- status: "approved" | "approved_with_modifications" | "rejected"
-- teacher_notes: Any modifications or rejection reasons
-
-**Outputs:**
-- `03_feedback_struggling_learner.json` - Persona feedback
-- `03_revision_plan.json` - Revision plan with teacher decisions
-- `03_revision_plan.md` - Teacher-readable plan
-- `04_lesson_final.json` - Updated with approved revisions
-
-**Evaluation Criteria:**
-
-The struggling learner persona ("Alex") evaluates:
-1. **Vocabulary Accessibility** - Tier 2/3 terms defined? Reading level appropriate?
-2. **Instruction Clarity** - Steps numbered? <3 steps or checklist provided?
-3. **Scaffolding Adequacy** - Models for writing tasks? Sentence frames? Graphic organizers?
-4. **Pacing Appropriateness** - Activities <20 min? Break points for longer activities?
-5. **Engagement Accessibility** - Multiple entry points? Choice opportunities?
+**Differentiation Principle:** Add, don't subtract. Never remove scaffolding to add challenge or simplify to add accessibility. Use tiering and optionality instead.
 
 **When to Skip Stage 3.5:**
 
 Stage 3.5 can be skipped if:
 - Teacher explicitly opts out (`"skip_persona_feedback": true` in 01_input.json)
-- Lesson is specifically designed for advanced learners only
+- Lesson is specifically designed for a narrow audience only
 
 Default: Always run Stage 3.5 for inclusive lesson design.
 
