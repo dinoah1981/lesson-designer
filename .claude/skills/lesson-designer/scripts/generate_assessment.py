@@ -72,7 +72,7 @@ def add_assessment_header(doc: Document, title: str, assessment_type: str, total
     table = doc.add_table(rows=1, cols=4)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     cells = table.rows[0].cells
-    cells[0].text = "Name: _________________"
+    cells[0].text = "Name: _____________"
     cells[1].text = "Date: ________"
     cells[2].text = "Period: ____"
     if total_points:
