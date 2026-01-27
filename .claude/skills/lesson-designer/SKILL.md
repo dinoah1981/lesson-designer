@@ -310,6 +310,44 @@ and knowledge students need...
    K5: How to cite sources properly
    ```
 
+   **Subject-Specific Guidance: English/Language Arts**
+
+   In ELA lessons, distinguish carefully between knowledge (content exposure) and skills (what students do with content):
+
+   | Category | Examples | Classification |
+   |----------|----------|----------------|
+   | **Knowledge** | Reading a text, poem, novel, or article | Exposure to new content = KNOWLEDGE |
+   | **Knowledge** | Understanding plot, characters, setting | Content comprehension = KNOWLEDGE |
+   | **Knowledge** | Learning literary terms (metaphor, irony) | Vocabulary/concepts = KNOWLEDGE |
+   | **Knowledge** | Historical/cultural context of a work | Background information = KNOWLEDGE |
+   | **Skill** | Comparing two texts or characters | Analysis action = SKILL |
+   | **Skill** | Interpreting themes or author's purpose | Interpretation action = SKILL |
+   | **Skill** | Analyzing literary devices and their effects | Analysis action = SKILL |
+   | **Skill** | Constructing arguments with textual evidence | Synthesis action = SKILL |
+   | **Skill** | Writing in response to reading | Production action = SKILL |
+
+   **Key distinction:** Simply READING or EXPERIENCING a text (book, poem, speech, article) is acquiring new KNOWLEDGE - the student is gaining exposure to content they didn't have before. COMPARING, INTERPRETING, ANALYZING, or EVALUATING that text requires SKILLS that operate on the knowledge.
+
+   **Example ELA decomposition:**
+
+   ```
+   Competency: "Students will analyze how an author develops theme through character and symbolism"
+
+   Skills:
+   S1: Identify and track recurring symbols in a text
+   S2: Analyze how character actions reveal theme
+   S3: Synthesize textual evidence to support thematic claims
+   S4: Compare thematic development across multiple scenes
+
+   Required Knowledge (content exposure):
+   K1: The text itself (having read and understood the plot/characters)
+   K2: Definition of theme, symbol, and characterization
+   K3: The specific symbols and their conventional meanings
+   K4: Author's historical/cultural context
+   ```
+
+   This distinction matters for lesson design: knowledge items often require reading time and comprehension activities, while skills require practice with scaffolded activities.
+
 3. **Present decomposition to teacher for review:**
 
    ```
@@ -624,10 +662,28 @@ For each activity in the lesson, include:
 | `duration` | Time in minutes | Yes |
 | `marzano_level` | One of: `retrieval`, `comprehension`, `analysis`, `knowledge_utilization` | Yes |
 | `instructions` | Numbered steps for students | Yes |
-| `materials` | List of required materials/resources | Yes |
+| `materials` | List of required materials/resources (see below) | Yes |
 | `student_output` | What students produce (tangible work product) | Yes |
 | `assessment_method` | How teacher knows it worked | Yes |
 | `differentiation` | Support/extension options | Recommended |
+
+**Materials Field - Important:**
+
+The `materials` field lists resources needed for the activity. **Any materials requiring teacher preparation will be generated as actual documents in Stage 5.**
+
+Categorize materials by type:
+
+| Category | Examples | Action |
+|----------|----------|--------|
+| **Basic Supplies** | "pencils", "paper", "whiteboard" | No generation needed |
+| **Standard Resources** | "textbook pages 42-45", "classroom computers" | No generation needed |
+| **Generated Materials** | "station cards", "graphic organizer", "discussion prompts", "role cards", "facilitation guide" | **Will be created as .docx files** |
+
+When listing materials that need generation, be specific about content:
+- Instead of: `"station cards"`
+- Write: `"station cards (4 stations: source analysis, vocabulary, timeline, synthesis)"`
+
+This specificity enables accurate material generation in Stage 5.
 
 #### Step 5: Include Hidden First Slide Content
 
@@ -1056,14 +1112,150 @@ Worksheets now include:
 - **Cognitive complexity-based spacing:** Answer space scales with Marzano level (2-6 lines based on thinking demands)
 - **Discussion facilitation notes:** Discussion slides include TIME ALLOCATION, WATCH FOR, and PROMPTS TO USE sections
 
+**Table Width Guidance for Google Docs Compatibility:**
+
+Google Docs doesn't reliably interpret percentage-based table widths or DXA column widths without explicit table-level sizing. When generating Word documents with tables:
+
+- **Use fixed widths in DXA (twips)** that match the actual page content width
+- **Standard page content width:** 9360 DXA (6.5 inches × 1440 twips/inch) for Letter size with 1" margins
+- **Set both table width AND column widths** explicitly in DXA units
+
+Example python-docx code:
+```python
+from docx.shared import Twips
+
+# Set table width to full content width
+table.width = Twips(9360)
+
+# Set column widths (must sum to table width)
+for row in table.rows:
+    row.cells[0].width = Twips(4680)  # 50% of 9360
+    row.cells[1].width = Twips(4680)  # 50% of 9360
+```
+
+This ensures tables render consistently when teachers upload .docx files to Google Docs or convert between formats.
+
 **Outputs:**
 - `05_slides.pptx` - PowerPoint presentation for teacher
 - `06_worksheet.docx` - Student materials matching lesson type
+
+#### Part 3: Generate Supplementary Materials (Activity-Specific)
+
+For activities that reference "materials" (station cards, graphic organizers, facilitation guides, etc.), generate the actual supplementary documents - don't just list what's needed.
+
+**When to Generate Supplementary Materials:**
+
+Review each activity's `materials` field. If any materials require teacher preparation beyond basic classroom supplies, generate them:
+
+| Material Type | When Needed | Output Format |
+|---------------|-------------|---------------|
+| **Station Cards** | Station rotation activities | One .docx per station with instructions, prompts, materials list |
+| **Graphic Organizers** | Compare/contrast, concept mapping, analysis activities | .docx with structured visual template |
+| **Discussion Prompts** | Socratic seminars, think-pair-share, group discussions | .docx with tiered questions and facilitation notes |
+| **Facilitation Guide** | Complex activities, jigsaw, debates | .docx with timing, teacher moves, anticipated responses |
+| **Text Sets** | Multiple source analysis | .docx with curated excerpts and guiding questions |
+| **Role Cards** | Simulations, debates, perspective-taking | .docx with role descriptions, talking points, goals |
+| **Rubrics** | Performance tasks, projects, presentations | .docx with criteria and performance levels |
+| **Sentence Starters** | Writing scaffolds, ELL support | .docx or embedded in worksheet |
+
+**Generation Process:**
+
+1. **Scan activities for material needs:**
+   ```python
+   for activity in lesson['activities']:
+       materials = activity.get('materials', [])
+       for material in materials:
+           if requires_generation(material):
+               generate_supplementary_material(material, activity)
+   ```
+
+2. **Generate each supplementary material:**
+
+   **Station Cards Example:**
+   ```
+   Station 1: Primary Source Analysis
+   ─────────────────────────────────
+   TIME: 8 minutes
+
+   YOUR TASK:
+   Read Document A (Lincoln's Letter) and answer:
+   1. Who wrote this? When? To whom?
+   2. What is the author's main argument?
+   3. What evidence supports the argument?
+
+   MATERIALS AT THIS STATION:
+   - Document A (laminated copy)
+   - Analysis worksheet
+   - Highlighters
+
+   WHEN YOU'RE DONE:
+   - Place your worksheet in the completed folder
+   - Move to Station 2 when the timer sounds
+   ```
+
+   **Facilitation Guide Example:**
+   ```
+   ACTIVITY: Socratic Seminar on Theme
+   ═══════════════════════════════════
+
+   SETUP (5 min before class):
+   - Arrange desks in inner/outer circle
+   - Post discussion norms
+   - Prepare observation sheets for outer circle
+
+   OPENING (3 min):
+   - Review norms
+   - Pose central question: "How does the author use [symbol] to develop the theme of [theme]?"
+
+   FACILITATION MOVES:
+   ┌─────────────────────────────────────────────────────────────┐
+   │ If students...          │ Try...                           │
+   ├─────────────────────────────────────────────────────────────┤
+   │ Go off-topic            │ "How does that connect to our    │
+   │                         │ central question?"               │
+   │ Only give opinions      │ "What textual evidence supports  │
+   │                         │ that interpretation?"            │
+   │ One student dominates   │ "Let's hear from someone who     │
+   │                         │ hasn't spoken yet."              │
+   │ Discussion stalls       │ Use backup prompt from list      │
+   └─────────────────────────────────────────────────────────────┘
+
+   BACKUP PROMPTS:
+   - "On page ___, the author writes ___. What does this suggest?"
+   - "How might [character] respond to that interpretation?"
+   - "Is there a counterargument to consider?"
+
+   CLOSING (2 min):
+   - Ask: "What's one idea you're still thinking about?"
+   - Collect observation sheets
+   ```
+
+3. **Save to materials subdirectory:**
+   ```
+   .lesson-designer/sessions/{session_id}/
+   ├── 05_slides.pptx
+   ├── 06_worksheet.docx
+   └── materials/
+       ├── station_1_card.docx
+       ├── station_2_card.docx
+       ├── station_3_card.docx
+       ├── graphic_organizer_compare_contrast.docx
+       └── socratic_seminar_facilitation_guide.docx
+   ```
+
+**Material Design Principles:**
+
+1. **Self-contained:** Each material should work without additional explanation
+2. **Consistent formatting:** Use same fonts, headers, and styling across all materials
+3. **Teacher-ready:** Include setup instructions and timing where relevant
+4. **Student-facing clarity:** Student materials use clear, grade-appropriate language
+5. **Differentiation built-in:** Include scaffolds (sentence starters, word banks) where appropriate
 
 **Requirements Covered:**
 - MATL-01: Generate actual .docx Word documents
 - MATL-03: Material type matches lesson type
 - ASMT-01: Each lesson includes assessment of its objective
+- MATL-04: Supplementary materials generated for complex activities
 
 **Next:** Stage 5b (optional simulation) or Stage 5c (optional assessment) or Stage 6
 
@@ -1520,6 +1712,8 @@ STAGE 5: Generate materials
       Output: 05_slides.pptx
   [ ] Generated Word document
       Output: 06_worksheet.docx
+  [ ] Generated supplementary materials (if needed)
+      Output: materials/ folder with station cards, graphic organizers, facilitation guides, etc.
 
 STAGE 6: Validate outputs
   [ ] Ran validate_outputs.py script
@@ -1543,6 +1737,11 @@ Session files location: .lesson-designer/sessions/{session_id}/
   - 05_slides.pptx
   - 06_worksheet.docx
   - 07_validation_report.txt
+  - materials/                    (supplementary materials folder)
+      - station_cards.docx
+      - graphic_organizer.docx
+      - facilitation_guide.docx
+      - (etc. - generated based on activity needs)
 ```
 
 **Quick Reference - Script Commands:**
@@ -1614,6 +1813,11 @@ The lesson includes 45% higher-order thinking activities...
 
 ---
 
-**Version:** 2.0.0
-**Last updated:** 2026-01-25
+**Version:** 3.1.0
+**Last updated:** 2026-01-26
 **Framework:** [Marzano's New Taxonomy](./MARZANO.md)
+
+**Changelog v3.1.0:**
+- Added English/ELA-specific guidance for distinguishing knowledge (text exposure) vs skills (interpretation/analysis)
+- Added supplementary materials generation (station cards, graphic organizers, facilitation guides)
+- Clarified that `materials` field items will be generated as actual documents
