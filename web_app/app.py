@@ -496,6 +496,13 @@ if "generate_modified_materials" not in st.session_state:
     st.session_state.generate_modified_materials = False
 if "generate_extension_materials" not in st.session_state:
     st.session_state.generate_extension_materials = False
+# Multi-competency queue
+if "competency_queue" not in st.session_state:
+    st.session_state.competency_queue = []  # List of {competency, lesson_count, ...}
+if "current_competency_index" not in st.session_state:
+    st.session_state.current_competency_index = 0
+if "completed_competencies" not in st.session_state:
+    st.session_state.completed_competencies = []  # Stores completed lesson sequences
 
 
 def get_claude_client():
@@ -516,8 +523,10 @@ def load_marzano_framework():
 
 
 def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledge: list = None, skills: list = None) -> dict:
-    """Use Claude to design a lesson based on input."""
+    """Use Claude to design a lesson or lesson sequence based on input."""
     client = get_claude_client()
+
+    lesson_count = input_data.get('lesson_count', 1)
 
     # Format knowledge and skills if provided
     knowledge_text = ""
@@ -530,7 +539,9 @@ def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledg
         skills_items = [s["item"] for s in skills]
         skills_text = f"\n\nCONFIRMED SKILLS (students must be able to do these):\n" + "\n".join(f"- {s}" for s in skills_items)
 
-    prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy.
+    if lesson_count == 1:
+        # Single lesson design
+        prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy.
 
 Design a complete lesson based on this input:
 - Competency: {input_data['competency']}
@@ -548,6 +559,7 @@ Requirements:
 
 Return a JSON object with this exact structure:
 {{
+    "is_sequence": false,
     "title": "Lesson title",
     "grade_level": "{input_data['grade_level']}",
     "duration": {input_data['duration']},
@@ -585,10 +597,78 @@ MARZANO FRAMEWORK REFERENCE:
 {marzano_framework[:3000]}
 
 Return ONLY the JSON object, no other text."""
+    else:
+        # Multi-lesson sequence design
+        prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy.
+
+Design a {lesson_count}-LESSON SEQUENCE based on this input:
+- Competency: {input_data['competency']}
+- Grade Level: {input_data['grade_level']}
+- Duration per lesson: {input_data['duration']} minutes
+- Total lessons: {lesson_count}
+- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}
+
+SEQUENCE DESIGN REQUIREMENTS:
+1. Each lesson should have a DISTINCT objective that builds toward the overall competency
+2. Lesson 1 should focus more on retrieval/comprehension (introducing concepts)
+3. Middle lessons should build analysis skills
+4. Final lesson should emphasize knowledge utilization and synthesis
+5. Vocabulary should be distributed across lessons (introduce new terms progressively)
+6. Each lesson should have at least 40% higher-order thinking time
+7. The sequence should tell a coherent learning story
+
+Return a JSON object with this exact structure:
+{{
+    "is_sequence": true,
+    "sequence_title": "Overall sequence title",
+    "competency": "{input_data['competency']}",
+    "grade_level": "{input_data['grade_level']}",
+    "total_lessons": {lesson_count},
+    "duration_per_lesson": {input_data['duration']},
+    "sequence_overview": "Brief description of how the lessons build toward mastery",
+    "lessons": [
+        {{
+            "lesson_number": 1,
+            "title": "Lesson 1 title",
+            "lesson_type": "introducing",
+            "objective": "Lesson 1 specific objective",
+            "vocabulary": [{{"word": "term1", "definition": "def1"}}],
+            "activities": [
+                {{
+                    "name": "Activity Name",
+                    "duration": 10,
+                    "marzano_level": "retrieval|comprehension|analysis|knowledge_utilization",
+                    "instructions": ["Step 1", "Step 2"],
+                    "materials": ["Material 1"],
+                    "student_output": "What students produce",
+                    "assessment_method": "How to assess"
+                }}
+            ],
+            "hidden_slide_content": {{
+                "objective": "Learning objective",
+                "agenda": [{{"activity": "Name", "duration": 10}}],
+                "misconceptions": ["Common misconception 1"],
+                "delivery_tips": ["Tip 1"]
+            }},
+            "assessment": {{
+                "type": "exit_ticket",
+                "description": "Brief description",
+                "questions": ["Question 1"]
+            }}
+        }}
+    ]
+}}
+
+Include {lesson_count} lesson objects in the "lessons" array.
+
+MARZANO FRAMEWORK REFERENCE:
+{marzano_framework[:2500]}
+
+Return ONLY the JSON object, no other text."""
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=4000,
+        max_tokens=8000,
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -673,11 +753,69 @@ Return ONLY the JSON object."""
     return json.loads(response_text.strip())
 
 
-def get_persona_feedback(lesson: dict, persona_key: str, persona: dict) -> dict:
-    """Get feedback from a student persona."""
+def get_persona_feedback(lesson_or_sequence: dict, persona_key: str, persona: dict) -> dict:
+    """Get feedback from a student persona on a lesson or lesson sequence."""
     client = get_claude_client()
 
-    prompt = f"""You are evaluating a lesson from the perspective of this student:
+    is_sequence = lesson_or_sequence.get('is_sequence', False)
+
+    if is_sequence:
+        # Format sequence for evaluation
+        lessons = lesson_or_sequence.get('lessons', [])
+        lessons_text = ""
+        for i, lesson in enumerate(lessons, 1):
+            lessons_text += f"""
+LESSON {i}: {lesson.get('title', 'Untitled')}
+Objective: {lesson.get('objective', 'Not specified')}
+Vocabulary: {', '.join([v.get('word', '') for v in lesson.get('vocabulary', [])])}
+Activities: {', '.join([a.get('name', '') + ' (' + a.get('marzano_level', '') + ')' for a in lesson.get('activities', [])])}
+"""
+
+        prompt = f"""You are evaluating a {len(lessons)}-LESSON SEQUENCE from the perspective of this student:
+
+STUDENT PERSONA: {persona['name']} ({persona['type']})
+Key Traits:
+{chr(10).join('- ' + t for t in persona['traits'])}
+
+Focus Question: {persona['focus']}
+
+SEQUENCE TO EVALUATE:
+Title: {lesson_or_sequence.get('sequence_title', 'Untitled Sequence')}
+Competency: {lesson_or_sequence.get('competency', 'Not specified')}
+Overview: {lesson_or_sequence.get('sequence_overview', 'Not specified')}
+Total Duration: {len(lessons)} lessons x {lesson_or_sequence.get('duration_per_lesson', 50)} minutes
+{lessons_text}
+
+Evaluate this ENTIRE SEQUENCE from {persona['name']}'s perspective. Consider:
+1. Does the sequence build appropriately across lessons?
+2. Is vocabulary introduced at the right pace?
+3. Does cognitive complexity increase appropriately?
+4. Will this student stay engaged across all {len(lessons)} lessons?
+5. Are there adequate scaffolds/challenges throughout?
+
+Return a JSON object:
+{{
+    "persona_key": "{persona_key}",
+    "persona_name": "{persona['name']}",
+    "overall_rating": 1-5,
+    "reaction": "A 2-3 sentence description of how {persona['name']} would likely respond to this sequence over {len(lessons)} days",
+    "concerns": [
+        {{
+            "id": "unique_id",
+            "lesson": "all|1|2|3|4",
+            "element": "vocabulary|instructions|scaffolding|pacing|engagement|challenge|progression",
+            "issue": "Specific issue description",
+            "severity": "high|medium|low",
+            "recommendation": "Specific suggested fix"
+        }}
+    ],
+    "strengths": ["What works well for this student across the sequence"]
+}}
+
+Return ONLY the JSON object."""
+    else:
+        # Single lesson evaluation
+        prompt = f"""You are evaluating a lesson from the perspective of this student:
 
 STUDENT PERSONA: {persona['name']} ({persona['type']})
 Key Traits:
@@ -686,15 +824,15 @@ Key Traits:
 Focus Question: {persona['focus']}
 
 LESSON TO EVALUATE:
-Title: {lesson.get('title', 'Untitled')}
-Objective: {lesson.get('objective', 'Not specified')}
-Duration: {lesson.get('duration', 0)} minutes
+Title: {lesson_or_sequence.get('title', 'Untitled')}
+Objective: {lesson_or_sequence.get('objective', 'Not specified')}
+Duration: {lesson_or_sequence.get('duration', 0)} minutes
 
 Activities:
-{json.dumps(lesson.get('activities', []), indent=2)}
+{json.dumps(lesson_or_sequence.get('activities', []), indent=2)}
 
 Vocabulary:
-{json.dumps(lesson.get('vocabulary', []), indent=2)}
+{json.dumps(lesson_or_sequence.get('vocabulary', []), indent=2)}
 
 Evaluate this lesson from {persona['name']}'s perspective. Consider:
 1. Would this student understand the vocabulary?
@@ -752,17 +890,62 @@ def escape_html(text: str) -> str:
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
 
 
-def format_lesson_display(lesson: dict) -> str:
-    """Format lesson as readable HTML for teachers."""
+def format_lesson_display(lesson_or_sequence: dict) -> str:
+    """Format lesson or sequence as readable HTML for teachers."""
     parts = []
 
-    # Overview section
-    title = escape_html(lesson.get('title', 'Untitled'))
-    objective = escape_html(lesson.get('objective', 'Not specified'))
-    duration = lesson.get('duration', 0)
-    lesson_type = escape_html(lesson.get('lesson_type', 'Not specified').replace('_', ' ').title())
+    is_sequence = lesson_or_sequence.get('is_sequence', False)
 
-    parts.append(f'''<div class="lesson-section">
+    if is_sequence:
+        # Sequence overview
+        title = escape_html(lesson_or_sequence.get('sequence_title', 'Untitled Sequence'))
+        competency = escape_html(lesson_or_sequence.get('competency', 'Not specified'))
+        overview = escape_html(lesson_or_sequence.get('sequence_overview', ''))
+        total_lessons = lesson_or_sequence.get('total_lessons', 0)
+        duration = lesson_or_sequence.get('duration_per_lesson', 0)
+
+        parts.append(f'''<div class="lesson-section">
+<h4>📚 Sequence Overview</h4>
+<p><strong>Title:</strong> {title}</p>
+<p><strong>Competency:</strong> {competency}</p>
+<p><strong>Duration:</strong> {total_lessons} lessons × {duration} minutes</p>
+<p><strong>Overview:</strong> {overview}</p>
+</div>''')
+
+        # Each lesson in sequence
+        for lesson in lesson_or_sequence.get('lessons', []):
+            lesson_num = lesson.get('lesson_number', 0)
+            lesson_title = escape_html(lesson.get('title', 'Untitled'))
+            objective = escape_html(lesson.get('objective', 'Not specified'))
+            lesson_type = escape_html(lesson.get('lesson_type', 'Not specified').replace('_', ' ').title())
+
+            parts.append(f'''<div class="lesson-section" style="border-left-color: {LIGHT_GREEN};">
+<h4>📅 Lesson {lesson_num}: {lesson_title}</h4>
+<p><strong>Objective:</strong> {objective}</p>
+<p><strong>Type:</strong> {lesson_type}</p>''')
+
+            # Vocabulary for this lesson
+            vocab = lesson.get('vocabulary', [])
+            if vocab:
+                vocab_text = ', '.join([f"<em>{escape_html(v.get('word', ''))}</em>" for v in vocab])
+                parts.append(f'<p><strong>Vocabulary:</strong> {vocab_text}</p>')
+
+            # Activities summary
+            activities = lesson.get('activities', [])
+            if activities:
+                act_list = ', '.join([f"{escape_html(a.get('name', ''))} ({a.get('marzano_level', '').replace('_', ' ').title()})" for a in activities])
+                parts.append(f'<p><strong>Activities:</strong> {act_list}</p>')
+
+            parts.append('</div>')
+
+    else:
+        # Single lesson display
+        title = escape_html(lesson_or_sequence.get('title', 'Untitled'))
+        objective = escape_html(lesson_or_sequence.get('objective', 'Not specified'))
+        duration = lesson_or_sequence.get('duration', 0)
+        lesson_type = escape_html(lesson_or_sequence.get('lesson_type', 'Not specified').replace('_', ' ').title())
+
+        parts.append(f'''<div class="lesson-section">
 <h4>📎 Lesson Overview</h4>
 <p><strong>Title:</strong> {title}</p>
 <p><strong>Objective:</strong> {objective}</p>
@@ -770,27 +953,27 @@ def format_lesson_display(lesson: dict) -> str:
 <p><strong>Type:</strong> {lesson_type}</p>
 </div>''')
 
-    # Vocabulary section
-    vocab = lesson.get('vocabulary', [])
-    if vocab:
-        vocab_items = ''.join([f"<li><strong>{escape_html(v.get('word', ''))}:</strong> {escape_html(v.get('definition', ''))}</li>" for v in vocab])
-        parts.append(f'<div class="lesson-section"><h4>📖 Key Vocabulary</h4><ul>{vocab_items}</ul></div>')
+        # Vocabulary section
+        vocab = lesson_or_sequence.get('vocabulary', [])
+        if vocab:
+            vocab_items = ''.join([f"<li><strong>{escape_html(v.get('word', ''))}:</strong> {escape_html(v.get('definition', ''))}</li>" for v in vocab])
+            parts.append(f'<div class="lesson-section"><h4>📖 Key Vocabulary</h4><ul>{vocab_items}</ul></div>')
 
-    # Activities section
-    activities = lesson.get('activities', [])
-    if activities:
-        activity_cards = []
-        for i, act in enumerate(activities, 1):
-            level = act.get('marzano_level', 'unknown')
-            level_display = escape_html(level.replace('_', ' ').title())
-            name = escape_html(act.get('name', 'Activity'))
-            duration_act = act.get('duration', 0)
-            student_output = escape_html(act.get('student_output', 'Not specified'))
+        # Activities section
+        activities = lesson_or_sequence.get('activities', [])
+        if activities:
+            activity_cards = []
+            for i, act in enumerate(activities, 1):
+                level = act.get('marzano_level', 'unknown')
+                level_display = escape_html(level.replace('_', ' ').title())
+                name = escape_html(act.get('name', 'Activity'))
+                duration_act = act.get('duration', 0)
+                student_output = escape_html(act.get('student_output', 'Not specified'))
 
-            instructions = act.get('instructions', [])
-            instruction_items = ''.join([f"<li>{escape_html(step)}</li>" for step in instructions])
+                instructions = act.get('instructions', [])
+                instruction_items = ''.join([f"<li>{escape_html(step)}</li>" for step in instructions])
 
-            card = f'''<div class="activity-card">
+                card = f'''<div class="activity-card">
 <div class="activity-name">{i}. {name}</div>
 <div class="activity-meta">
 <span>⏱️ {duration_act} min</span>
@@ -800,18 +983,18 @@ def format_lesson_display(lesson: dict) -> str:
 <ol>{instruction_items}</ol>
 <p><strong>Student Output:</strong> {student_output}</p>
 </div>'''
-            activity_cards.append(card)
+                activity_cards.append(card)
 
-        parts.append(f'<div class="lesson-section"><h4>📋 Activities</h4>{"".join(activity_cards)}</div>')
+            parts.append(f'<div class="lesson-section"><h4>📋 Activities</h4>{"".join(activity_cards)}</div>')
 
-    # Assessment section
-    assessment = lesson.get('assessment', {})
-    if assessment:
-        assess_type = escape_html(assessment.get('type', 'exit_ticket').replace('_', ' ').title())
-        questions = assessment.get('questions', [])
-        question_items = ''.join([f"<li>{escape_html(q)}</li>" for q in questions])
+        # Assessment section
+        assessment = lesson_or_sequence.get('assessment', {})
+        if assessment:
+            assess_type = escape_html(assessment.get('type', 'exit_ticket').replace('_', ' ').title())
+            questions = assessment.get('questions', [])
+            question_items = ''.join([f"<li>{escape_html(q)}</li>" for q in questions])
 
-        parts.append(f'''<div class="lesson-section">
+            parts.append(f'''<div class="lesson-section">
 <h4>✅ Assessment</h4>
 <p><strong>Type:</strong> {assess_type}</p>
 <p><strong>Questions:</strong></p>
@@ -829,6 +1012,23 @@ def reset_session():
     st.session_state.selected_feedback = {}
     st.session_state.generate_modified_materials = False
     st.session_state.generate_extension_materials = False
+    st.session_state.competency_queue = []
+    st.session_state.current_competency_index = 0
+    st.session_state.completed_competencies = []
+
+
+def start_next_competency():
+    """Move to the next competency in the queue."""
+    st.session_state.current_competency_index += 1
+    st.session_state.stage = 2  # Go to knowledge/skills review for next competency
+    st.session_state.lesson_data = {}
+    st.session_state.selected_feedback = {}
+    st.session_state.generate_modified_materials = False
+    st.session_state.generate_extension_materials = False
+    # Load the next competency's input data
+    if st.session_state.current_competency_index < len(st.session_state.competency_queue):
+        next_comp = st.session_state.competency_queue[st.session_state.current_competency_index]
+        st.session_state.lesson_data["input"] = next_comp
 
 
 def render_progress_stepper(current_stage: int):
@@ -1095,30 +1295,56 @@ render_progress_stepper(st.session_state.stage)
 
 # Stage 1: Input Requirements
 if st.session_state.stage == 1:
-    st.markdown('<div class="stage-header"><span class="stage-header-icon">📝</span> Define Your Lesson</div>', unsafe_allow_html=True)
+    st.markdown('<div class="stage-header"><span class="stage-header-icon">📝</span> Define Your Lessons</div>', unsafe_allow_html=True)
 
-    with st.form("lesson_input"):
-        col1, col2 = st.columns(2)
+    # Initialize temp competencies list in session state if not exists
+    if "temp_competencies" not in st.session_state:
+        st.session_state.temp_competencies = []
 
-        with col1:
-            competency = st.text_area(
-                "What competency should students master?",
-                placeholder="e.g., Students will analyze primary sources to evaluate historical claims",
-                help="State what students will DO, not just what they'll learn about",
-                height=100
+    # Shared settings
+    st.markdown("### General Settings")
+    col1, col2 = st.columns(2)
+    with col1:
+        grade_level = st.selectbox(
+            "Grade Level",
+            ["6th grade", "7th grade", "8th grade", "9th grade",
+             "10th grade", "11th grade", "12th grade", "AP", "College"],
+            key="grade_level_input"
+        )
+    with col2:
+        duration = st.slider("Lesson Duration (minutes)", 30, 90, 50, 5, key="duration_input")
+
+    constraints = st.text_area(
+        "Any constraints? (optional)",
+        placeholder="e.g., Limited technology, students already know X...",
+        height=68,
+        key="constraints_input"
+    )
+
+    st.divider()
+
+    # Competency input section
+    st.markdown("### Add Competencies")
+    st.markdown('<p style="color: #666; font-size: 0.9rem;">Add one or more competencies. Each can span 1-4 lessons.</p>', unsafe_allow_html=True)
+
+    with st.form("add_competency_form"):
+        competency = st.text_area(
+            "Competency",
+            placeholder="e.g., Students will analyze primary sources to evaluate historical claims",
+            help="State what students will DO, not just what they'll learn about",
+            height=80
+        )
+
+        comp_col1, comp_col2 = st.columns(2)
+        with comp_col1:
+            lesson_count = st.selectbox(
+                "Number of lessons for this competency",
+                [1, 2, 3, 4],
+                format_func=lambda x: f"{x} lesson{'s' if x > 1 else ''}"
             )
-
-            grade_level = st.selectbox(
-                "Grade Level",
-                ["6th grade", "7th grade", "8th grade", "9th grade",
-                 "10th grade", "11th grade", "12th grade", "AP", "College"]
-            )
-
-        with col2:
-            duration = st.slider("Lesson Duration (minutes)", 30, 90, 50, 5)
-
+        with comp_col2:
             lesson_type = st.selectbox(
-                "Lesson Type",
+                "Primary lesson type",
                 ["introducing", "practicing", "applying", "synthesizing", "novel_application"],
                 format_func=lambda x: {
                     "introducing": "Introducing New Content",
@@ -1129,28 +1355,60 @@ if st.session_state.stage == 1:
                 }.get(x, x)
             )
 
-            constraints = st.text_area(
-                "Any constraints? (optional)",
-                placeholder="e.g., Limited technology, students already know X...",
-                height=68
-            )
+        add_competency = st.form_submit_button("➕ Add Competency", use_container_width=True)
 
-        submitted = st.form_submit_button("Design My Lesson →", type="primary", use_container_width=True)
+        if add_competency and competency.strip():
+            st.session_state.temp_competencies.append({
+                "competency": competency.strip(),
+                "lesson_count": lesson_count,
+                "lesson_type": lesson_type,
+                "grade_level": grade_level,
+                "duration": duration,
+                "constraints": constraints
+            })
+            st.rerun()
 
-        if submitted:
-            if not competency:
-                st.error("Please enter a competency statement.")
-            else:
-                st.session_state.lesson_data["input"] = {
-                    "competency": competency,
-                    "grade_level": grade_level,
-                    "duration": duration,
-                    "lesson_type": lesson_type,
-                    "constraints": constraints
-                }
+    # Display queued competencies
+    if st.session_state.temp_competencies:
+        st.divider()
+        st.markdown("### Queued Competencies")
+
+        total_lessons = sum(c["lesson_count"] for c in st.session_state.temp_competencies)
+        st.markdown(f'<p style="color: {DARK_GREEN}; font-weight: 600;">Total: {len(st.session_state.temp_competencies)} competenc{"ies" if len(st.session_state.temp_competencies) > 1 else "y"} → {total_lessons} lesson{"s" if total_lessons > 1 else ""}</p>', unsafe_allow_html=True)
+
+        for i, comp in enumerate(st.session_state.temp_competencies):
+            col1, col2 = st.columns([0.9, 0.1])
+            with col1:
+                lesson_word = "lesson" if comp["lesson_count"] == 1 else "lessons"
+                st.markdown(f"""
+                <div style="background: #f8faf8; border-left: 3px solid {LIGHT_GREEN}; padding: 0.75rem 1rem; margin: 0.5rem 0; border-radius: 0 8px 8px 0;">
+                    <strong style="color: {DARK_GREEN};">Competency {i+1}</strong> ({comp["lesson_count"]} {lesson_word})<br>
+                    <span style="color: #555;">{comp["competency"][:100]}{"..." if len(comp["competency"]) > 100 else ""}</span>
+                </div>
+                """, unsafe_allow_html=True)
+            with col2:
+                if st.button("🗑️", key=f"remove_comp_{i}"):
+                    st.session_state.temp_competencies.pop(i)
+                    st.rerun()
+
+        st.divider()
+
+        # Start button
+        if st.button("🚀 Start Designing Lessons", type="primary", use_container_width=True):
+            if st.session_state.temp_competencies:
+                # Transfer to competency queue
+                st.session_state.competency_queue = st.session_state.temp_competencies.copy()
+                st.session_state.current_competency_index = 0
+                st.session_state.temp_competencies = []
+
+                # Load first competency
+                first_comp = st.session_state.competency_queue[0]
+                st.session_state.lesson_data["input"] = first_comp
                 st.session_state.session_id = str(uuid.uuid4())[:8]
                 st.session_state.stage = 2
                 st.rerun()
+    else:
+        st.info("👆 Add at least one competency to get started.")
 
 
 # Stage 2: Review Knowledge & Skills
@@ -1293,15 +1551,19 @@ elif st.session_state.stage == 2:
 
 # Stage 3: Design Lesson
 elif st.session_state.stage == 3:
-    st.markdown('<div class="stage-header"><span class="stage-header-icon">🎨</span> Designing Your Lesson</div>', unsafe_allow_html=True)
+    lesson_count = st.session_state.lesson_data["input"].get("lesson_count", 1)
+    header_text = "Designing Your Lesson Sequence" if lesson_count > 1 else "Designing Your Lesson"
+    st.markdown(f'<div class="stage-header"><span class="stage-header-icon">🎨</span> {header_text}</div>', unsafe_allow_html=True)
 
     input_data = st.session_state.lesson_data["input"]
 
+    lesson_info = f"{lesson_count} lessons × {input_data['duration']} min" if lesson_count > 1 else f"{input_data['duration']} min"
+
     st.markdown(f"""
     <div class="info-box">
-        <strong>Designing lesson for:</strong> {input_data['competency']}<br>
+        <strong>Designing for:</strong> {input_data['competency']}<br>
         <strong>Grade:</strong> {input_data['grade_level']} |
-        <strong>Duration:</strong> {input_data['duration']} min |
+        <strong>Duration:</strong> {lesson_info} |
         <strong>Type:</strong> {input_data['lesson_type'].replace('_', ' ').title()}
     </div>
     """, unsafe_allow_html=True)
@@ -1334,28 +1596,52 @@ elif st.session_state.stage == 3:
 elif st.session_state.stage == 4:
     st.markdown('<div class="stage-header"><span class="stage-header-icon">👥</span> Student Persona Review</div>', unsafe_allow_html=True)
 
-    lesson = st.session_state.lesson_data["lesson"]
+    lesson_or_sequence = st.session_state.lesson_data["lesson"]
+    is_sequence = lesson_or_sequence.get('is_sequence', False)
 
-    # Show lesson in readable format
-    with st.expander("📋 View Your Lesson Design", expanded=False):
-        st.markdown(format_lesson_display(lesson), unsafe_allow_html=True)
+    # Show current competency info
+    current_idx = st.session_state.current_competency_index
+    total_competencies = len(st.session_state.competency_queue)
+    if total_competencies > 1:
+        st.markdown(f'<p style="color: {LIGHT_GREEN}; font-weight: 600;">Competency {current_idx + 1} of {total_competencies}</p>', unsafe_allow_html=True)
+
+    # Show lesson/sequence in readable format
+    expander_title = "📋 View Your Lesson Sequence" if is_sequence else "📋 View Your Lesson Design"
+    with st.expander(expander_title, expanded=False):
+        st.markdown(format_lesson_display(lesson_or_sequence), unsafe_allow_html=True)
 
     # Calculate cognitive distribution
-    total_time = sum(a["duration"] for a in lesson.get("activities", []))
-    higher_order_time = sum(
-        a["duration"] for a in lesson.get("activities", [])
-        if a.get("marzano_level") in ["analysis", "knowledge_utilization"]
-    )
+    if is_sequence:
+        all_activities = []
+        for lesson in lesson_or_sequence.get("lessons", []):
+            all_activities.extend(lesson.get("activities", []))
+        total_time = sum(a["duration"] for a in all_activities)
+        higher_order_time = sum(
+            a["duration"] for a in all_activities
+            if a.get("marzano_level") in ["analysis", "knowledge_utilization"]
+        )
+        total_lessons = lesson_or_sequence.get("total_lessons", 1)
+    else:
+        all_activities = lesson_or_sequence.get("activities", [])
+        total_time = sum(a["duration"] for a in all_activities)
+        higher_order_time = sum(
+            a["duration"] for a in all_activities
+            if a.get("marzano_level") in ["analysis", "knowledge_utilization"]
+        )
+        total_lessons = 1
+
     cognitive_percent = (higher_order_time / total_time * 100) if total_time > 0 else 0
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.metric("Activities", len(lesson.get("activities", [])))
+        st.metric("Lessons", total_lessons)
     with col2:
-        st.metric("Higher-Order Thinking", f"{cognitive_percent:.0f}%")
+        st.metric("Activities", len(all_activities))
     with col3:
+        st.metric("Higher-Order", f"{cognitive_percent:.0f}%")
+    with col4:
         status = "✅ Pass" if cognitive_percent >= 40 else "⚠️ Low"
-        st.metric("Cognitive Rigor", status)
+        st.metric("Rigor", status)
 
     st.divider()
 
@@ -1530,45 +1816,93 @@ elif st.session_state.stage == 4:
 elif st.session_state.stage == 5:
     st.markdown('<div class="stage-header"><span class="stage-header-icon">⚙️</span> Generating Materials</div>', unsafe_allow_html=True)
 
-    lesson = st.session_state.lesson_data["lesson"]
+    lesson_or_sequence = st.session_state.lesson_data["lesson"]
+    is_sequence = lesson_or_sequence.get('is_sequence', False)
+    temp_dir = Path(tempfile.mkdtemp())
 
-    with st.spinner("📊 Generating PowerPoint slides..."):
-        try:
-            temp_dir = Path(tempfile.mkdtemp())
-            lesson_path = temp_dir / "lesson.json"
+    if is_sequence:
+        # Generate materials for each lesson in the sequence
+        lessons = lesson_or_sequence.get('lessons', [])
+        st.session_state.lesson_data["sequence_materials"] = []
 
-            with open(lesson_path, 'w', encoding='utf-8') as f:
-                json.dump(lesson, f, indent=2)
+        progress = st.progress(0)
+        for i, lesson in enumerate(lessons):
+            lesson_num = lesson.get('lesson_number', i + 1)
 
-            slides_path = temp_dir / "slides.pptx"
-            generate_slides(str(lesson_path), str(slides_path))
-            st.session_state.lesson_data["slides_path"] = str(slides_path)
+            with st.spinner(f"📊 Generating materials for Lesson {lesson_num} of {len(lessons)}..."):
+                try:
+                    # Save individual lesson JSON
+                    lesson_path = temp_dir / f"lesson_{lesson_num}.json"
+                    # Add required fields from sequence
+                    lesson_with_meta = lesson.copy()
+                    lesson_with_meta['grade_level'] = lesson_or_sequence.get('grade_level')
+                    lesson_with_meta['duration'] = lesson_or_sequence.get('duration_per_lesson')
 
-        except Exception as e:
-            st.error(f"Error generating slides: {e}")
+                    with open(lesson_path, 'w', encoding='utf-8') as f:
+                        json.dump(lesson_with_meta, f, indent=2)
 
-    with st.spinner("📝 Generating student worksheet..."):
-        try:
-            worksheet_path = temp_dir / "worksheet.docx"
-            template_path = Path(__file__).parent.parent / ".claude" / "skills" / "lesson-designer" / "templates" / "student_worksheet.docx"
+                    # Generate slides
+                    slides_path = temp_dir / f"lesson_{lesson_num}_slides.pptx"
+                    generate_slides(str(lesson_path), str(slides_path))
 
-            if template_path.exists():
-                generate_worksheet(str(lesson_path), str(template_path), str(worksheet_path))
-            else:
-                generate_worksheet(str(lesson_path), None, str(worksheet_path))
+                    # Generate worksheet
+                    worksheet_path = temp_dir / f"lesson_{lesson_num}_worksheet.docx"
+                    template_path = Path(__file__).parent.parent / ".claude" / "skills" / "lesson-designer" / "templates" / "student_worksheet.docx"
+                    if template_path.exists():
+                        generate_worksheet(str(lesson_path), str(template_path), str(worksheet_path))
+                    else:
+                        generate_worksheet(str(lesson_path), None, str(worksheet_path))
 
-            st.session_state.lesson_data["worksheet_path"] = str(worksheet_path)
+                    st.session_state.lesson_data["sequence_materials"].append({
+                        "lesson_number": lesson_num,
+                        "title": lesson.get('title', f'Lesson {lesson_num}'),
+                        "slides_path": str(slides_path),
+                        "worksheet_path": str(worksheet_path)
+                    })
 
-        except Exception as e:
-            st.error(f"Error generating worksheet: {e}")
+                except Exception as e:
+                    st.error(f"Error generating materials for Lesson {lesson_num}: {e}")
 
-    # Generate modified worksheet for struggling learners if selected
+            progress.progress((i + 1) / len(lessons))
+
+    else:
+        # Single lesson generation
+        with st.spinner("📊 Generating PowerPoint slides..."):
+            try:
+                lesson_path = temp_dir / "lesson.json"
+
+                with open(lesson_path, 'w', encoding='utf-8') as f:
+                    json.dump(lesson_or_sequence, f, indent=2)
+
+                slides_path = temp_dir / "slides.pptx"
+                generate_slides(str(lesson_path), str(slides_path))
+                st.session_state.lesson_data["slides_path"] = str(slides_path)
+
+            except Exception as e:
+                st.error(f"Error generating slides: {e}")
+
+        with st.spinner("📝 Generating student worksheet..."):
+            try:
+                worksheet_path = temp_dir / "worksheet.docx"
+                template_path = Path(__file__).parent.parent / ".claude" / "skills" / "lesson-designer" / "templates" / "student_worksheet.docx"
+
+                if template_path.exists():
+                    generate_worksheet(str(lesson_path), str(template_path), str(worksheet_path))
+                else:
+                    generate_worksheet(str(lesson_path), None, str(worksheet_path))
+
+                st.session_state.lesson_data["worksheet_path"] = str(worksheet_path)
+
+            except Exception as e:
+                st.error(f"Error generating worksheet: {e}")
+
+    # Generate modified worksheet for struggling learners if selected (for single lessons or entire sequence)
     if st.session_state.lesson_data.get("generate_modified", False):
         alex_concerns = st.session_state.lesson_data.get("alex_concerns", [])
         if alex_concerns:
-            with st.spinner("📝 Generating modified worksheet for struggling learners..."):
+            with st.spinner("📝 Generating modified materials for struggling learners..."):
                 try:
-                    modified_content = generate_modified_worksheet(lesson, alex_concerns)
+                    modified_content = generate_modified_worksheet(lesson_or_sequence, alex_concerns)
                     modified_path = temp_dir / "worksheet_modified.txt"
                     with open(modified_path, 'w', encoding='utf-8') as f:
                         f.write(modified_content)
@@ -1580,9 +1914,9 @@ elif st.session_state.stage == 5:
     if st.session_state.lesson_data.get("generate_extension", False):
         marcus_concerns = st.session_state.lesson_data.get("marcus_concerns", [])
         if marcus_concerns:
-            with st.spinner("🚀 Generating extension worksheet for advanced learners..."):
+            with st.spinner("🚀 Generating extension materials for advanced learners..."):
                 try:
-                    extension_content = generate_extension_worksheet(lesson, marcus_concerns)
+                    extension_content = generate_extension_worksheet(lesson_or_sequence, marcus_concerns)
                     extension_path = temp_dir / "worksheet_extension.txt"
                     with open(extension_path, 'w', encoding='utf-8') as f:
                         f.write(extension_content)
@@ -1598,50 +1932,101 @@ elif st.session_state.stage == 5:
 elif st.session_state.stage == 6:
     st.markdown('<div class="stage-header"><span class="stage-header-icon">🎉</span> Your Materials Are Ready!</div>', unsafe_allow_html=True)
 
-    lesson = st.session_state.lesson_data["lesson"]
+    lesson_or_sequence = st.session_state.lesson_data["lesson"]
+    is_sequence = lesson_or_sequence.get('is_sequence', False)
 
-    st.markdown(f"""
-    <div class="success-box">
-        <h3 style="color: {DARK_GREEN}; margin-top: 0;">✅ Lesson Complete!</h3>
-        <p><strong>{lesson.get('title', 'Your Lesson')}</strong></p>
-        <p>Grade: {lesson.get('grade_level')} | Duration: {lesson.get('duration')} minutes</p>
-        <p><strong>Objective:</strong> {lesson.get('objective', 'N/A')}</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if is_sequence:
+        # Sequence complete message
+        st.markdown(f"""
+        <div class="success-box">
+            <h3 style="color: {DARK_GREEN}; margin-top: 0;">✅ Lesson Sequence Complete!</h3>
+            <p><strong>{lesson_or_sequence.get('sequence_title', 'Your Sequence')}</strong></p>
+            <p>Grade: {lesson_or_sequence.get('grade_level')} | {lesson_or_sequence.get('total_lessons')} lessons × {lesson_or_sequence.get('duration_per_lesson')} minutes</p>
+            <p><strong>Competency:</strong> {lesson_or_sequence.get('competency', 'N/A')}</p>
+        </div>
+        """, unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+        # Download buttons for each lesson
+        st.markdown("### 📚 Download Materials by Lesson")
 
-    with col1:
-        st.markdown(f"### 📊 Slide Deck")
-        slides_path = st.session_state.lesson_data.get("slides_path")
-        if slides_path and Path(slides_path).exists():
-            with open(slides_path, "rb") as f:
-                st.download_button(
-                    label="⬇️ Download PowerPoint",
-                    data=f.read(),
-                    file_name=f"lesson_{st.session_state.session_id}_slides.pptx",
-                    mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
-                    use_container_width=True
-                )
-            st.caption("Includes hidden first slide with lesson plan for teachers")
-        else:
-            st.warning("Slides not available")
+        sequence_materials = st.session_state.lesson_data.get("sequence_materials", [])
+        for mat in sequence_materials:
+            lesson_num = mat.get("lesson_number", 0)
+            lesson_title = mat.get("title", f"Lesson {lesson_num}")
 
-    with col2:
-        st.markdown(f"### 📝 Student Worksheet")
-        worksheet_path = st.session_state.lesson_data.get("worksheet_path")
-        if worksheet_path and Path(worksheet_path).exists():
-            with open(worksheet_path, "rb") as f:
-                st.download_button(
-                    label="⬇️ Download Worksheet",
-                    data=f.read(),
-                    file_name=f"lesson_{st.session_state.session_id}_worksheet.docx",
-                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    use_container_width=True
-                )
-            st.caption("Formatted with answer space for students")
-        else:
-            st.warning("Worksheet not available")
+            st.markdown(f"#### Lesson {lesson_num}: {lesson_title}")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                slides_path = mat.get("slides_path")
+                if slides_path and Path(slides_path).exists():
+                    with open(slides_path, "rb") as f:
+                        st.download_button(
+                            label=f"📊 Slides - Lesson {lesson_num}",
+                            data=f.read(),
+                            file_name=f"lesson_{st.session_state.session_id}_L{lesson_num}_slides.pptx",
+                            mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                            use_container_width=True,
+                            key=f"download_slides_{lesson_num}"
+                        )
+
+            with col2:
+                worksheet_path = mat.get("worksheet_path")
+                if worksheet_path and Path(worksheet_path).exists():
+                    with open(worksheet_path, "rb") as f:
+                        st.download_button(
+                            label=f"📝 Worksheet - Lesson {lesson_num}",
+                            data=f.read(),
+                            file_name=f"lesson_{st.session_state.session_id}_L{lesson_num}_worksheet.docx",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            use_container_width=True,
+                            key=f"download_worksheet_{lesson_num}"
+                        )
+
+    else:
+        # Single lesson complete message
+        st.markdown(f"""
+        <div class="success-box">
+            <h3 style="color: {DARK_GREEN}; margin-top: 0;">✅ Lesson Complete!</h3>
+            <p><strong>{lesson_or_sequence.get('title', 'Your Lesson')}</strong></p>
+            <p>Grade: {lesson_or_sequence.get('grade_level')} | Duration: {lesson_or_sequence.get('duration')} minutes</p>
+            <p><strong>Objective:</strong> {lesson_or_sequence.get('objective', 'N/A')}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown(f"### 📊 Slide Deck")
+            slides_path = st.session_state.lesson_data.get("slides_path")
+            if slides_path and Path(slides_path).exists():
+                with open(slides_path, "rb") as f:
+                    st.download_button(
+                        label="⬇️ Download PowerPoint",
+                        data=f.read(),
+                        file_name=f"lesson_{st.session_state.session_id}_slides.pptx",
+                        mime="application/vnd.openxmlformats-officedocument.presentationml.presentation",
+                        use_container_width=True
+                    )
+                st.caption("Includes hidden first slide with lesson plan for teachers")
+            else:
+                st.warning("Slides not available")
+
+        with col2:
+            st.markdown(f"### 📝 Student Worksheet")
+            worksheet_path = st.session_state.lesson_data.get("worksheet_path")
+            if worksheet_path and Path(worksheet_path).exists():
+                with open(worksheet_path, "rb") as f:
+                    st.download_button(
+                        label="⬇️ Download Worksheet",
+                        data=f.read(),
+                        file_name=f"lesson_{st.session_state.session_id}_worksheet.docx",
+                        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                        use_container_width=True
+                    )
+                st.caption("Formatted with answer space for students")
+            else:
+                st.warning("Worksheet not available")
 
     # Additional differentiated materials section
     modified_path = st.session_state.lesson_data.get("modified_worksheet_path")
@@ -1711,6 +2096,48 @@ elif st.session_state.stage == 6:
 
     st.markdown("---")
 
-    if st.button("🎉 Design Another Lesson", type="primary", use_container_width=True):
-        reset_session()
-        st.rerun()
+    # Check if there are more competencies in the queue
+    current_idx = st.session_state.current_competency_index
+    total_competencies = len(st.session_state.competency_queue)
+
+    if current_idx < total_competencies - 1:
+        # More competencies to process
+        next_comp = st.session_state.competency_queue[current_idx + 1]
+        remaining = total_competencies - current_idx - 1
+
+        st.markdown(f"""
+        <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 2px solid #1976d2; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
+            <p style="color: #1565c0; font-weight: 700; font-size: 1.1rem; margin: 0 0 0.5rem 0;">📋 {remaining} More Competenc{"ies" if remaining > 1 else "y"} Remaining</p>
+            <p style="color: #424242; margin: 0 0 0.5rem 0;"><strong>Next up:</strong> {next_comp['competency'][:80]}{"..." if len(next_comp['competency']) > 80 else ""}</p>
+            <p style="color: #666; font-size: 0.85rem; margin: 0;">{next_comp['lesson_count']} lesson{"s" if next_comp['lesson_count'] > 1 else ""}</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("➡️ Continue to Next Competency", type="primary", use_container_width=True):
+                # Store completed competency
+                st.session_state.completed_competencies.append({
+                    "input": st.session_state.lesson_data.get("input"),
+                    "lesson": st.session_state.lesson_data.get("lesson"),
+                    "slides_path": st.session_state.lesson_data.get("slides_path"),
+                    "worksheet_path": st.session_state.lesson_data.get("worksheet_path")
+                })
+                start_next_competency()
+                st.rerun()
+        with col2:
+            if st.button("🏁 Finish & Start Over", use_container_width=True):
+                reset_session()
+                st.rerun()
+    else:
+        # All competencies complete
+        if total_competencies > 1:
+            st.markdown(f"""
+            <div style="background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%); border: 2px solid {LIGHT_GREEN}; border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
+                <p style="color: {DARK_GREEN}; font-weight: 700; font-size: 1.1rem; margin: 0;">🎉 All {total_competencies} Competencies Complete!</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+        if st.button("🎉 Design More Lessons", type="primary", use_container_width=True):
+            reset_session()
+            st.rerun()
