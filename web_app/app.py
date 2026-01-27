@@ -832,41 +832,44 @@ def reset_session():
 
 
 def render_progress_stepper(current_stage: int):
-    """Render a horizontal progress stepper showing all 6 stages."""
+    """Render a horizontal progress stepper using Streamlit columns."""
     stages = [
-        ("1", "Define"),
-        ("2", "Review"),
-        ("3", "Design"),
-        ("4", "Evaluate"),
-        ("5", "Generate"),
-        ("6", "Download"),
+        ("1", "Define", "📝"),
+        ("2", "Review", "🔍"),
+        ("3", "Design", "🎨"),
+        ("4", "Evaluate", "👥"),
+        ("5", "Generate", "⚙️"),
+        ("6", "Download", "📥"),
     ]
 
-    steps_html = []
-    for num, label in stages:
+    cols = st.columns(6)
+    for i, (num, label, icon) in enumerate(stages):
         stage_num = int(num)
-        if stage_num < current_stage:
-            status_class = "completed"
-            icon = "✓"
-        elif stage_num == current_stage:
-            status_class = "current"
-            icon = num
-        else:
-            status_class = "pending"
-            icon = num
-
-        steps_html.append(f'''
-            <div class="step {status_class}">
-                <div class="step-circle">{icon}</div>
-                <div class="step-label">{label}</div>
-            </div>
-        ''')
-
-    st.markdown(f'''
-        <div class="progress-stepper">
-            {''.join(steps_html)}
-        </div>
-    ''', unsafe_allow_html=True)
+        with cols[i]:
+            if stage_num < current_stage:
+                # Completed
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: {LIGHT_GREEN}; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem;">✓</div>
+                    <div style="font-size: 0.8rem; color: {LIGHT_GREEN}; font-weight: 600;">{label}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            elif stage_num == current_stage:
+                # Current
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: {DARK_GREEN}; color: white; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.5rem; box-shadow: 0 0 0 4px rgba(77,174,88,0.3);">{num}</div>
+                    <div style="font-size: 0.8rem; color: {DARK_GREEN}; font-weight: 700;">{label}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            else:
+                # Pending
+                st.markdown(f"""
+                <div style="text-align: center;">
+                    <div style="width: 40px; height: 40px; border-radius: 50%; background: #f0f0f0; color: #999; display: inline-flex; align-items: center; justify-content: center; font-weight: 600; font-size: 1rem; margin-bottom: 0.5rem; border: 2px solid #e0e0e0;">{num}</div>
+                    <div style="font-size: 0.8rem; color: #999;">{label}</div>
+                </div>
+                """, unsafe_allow_html=True)
 
 
 def _store_persona_concerns_for_materials(feedback_list: list):
