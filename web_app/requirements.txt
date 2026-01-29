@@ -3,3 +3,4 @@ anthropic>=0.18.0
 python-pptx>=0.6.21
 python-docx>=0.8.11
 docxtpl>=0.16.0
+requests>=2.28.0

@@ -514,6 +514,82 @@ def get_claude_client():
     return anthropic.Anthropic(api_key=api_key)
 
 
+def search_image_for_activity(description: str, context: str = "") -> dict:
+    """Search for a relevant image based on activity description.
+
+    Returns dict with 'description' and optionally 'url'.
+    Uses Unsplash Source API for free, high-quality images.
+    """
+    import urllib.parse
+    import requests
+
+    if not description:
+        return {}
+
+    # Create search query from description
+    # Extract key terms for better search results
+    search_terms = description.lower()
+    # Remove common words that don't help image search
+    for word in ['a', 'an', 'the', 'showing', 'depicting', 'of', 'with', 'for', 'that', 'which', 'image', 'visual', 'picture', 'diagram']:
+        search_terms = search_terms.replace(f' {word} ', ' ')
+
+    # Add context if provided (e.g., subject area)
+    if context:
+        search_terms = f"{context} {search_terms}"
+
+    # Clean up and limit to key words
+    search_terms = ' '.join(search_terms.split()[:6])  # Limit to 6 words
+
+    try:
+        # Use Unsplash Source API (free, no auth required)
+        # This returns a redirect to an actual image
+        encoded_query = urllib.parse.quote(search_terms)
+
+        # Try to get image from Unsplash
+        unsplash_url = f"https://source.unsplash.com/800x600/?{encoded_query}"
+
+        # Verify the URL works by checking headers (don't download full image)
+        response = requests.head(unsplash_url, allow_redirects=True, timeout=5)
+
+        if response.status_code == 200:
+            # Return the final URL after redirects
+            return {
+                "description": description,
+                "url": response.url,
+                "search_terms": search_terms
+            }
+    except Exception:
+        pass  # Fall back to description only
+
+    # If search fails, return just the description
+    return {
+        "description": description,
+        "url": None,
+        "search_terms": search_terms
+    }
+
+
+def process_lesson_images(lesson: dict, subject_context: str = "") -> dict:
+    """Process visual_description fields and search for images."""
+    enhanced = lesson.copy()
+
+    activities = enhanced.get('activities', [])
+    for activity in activities:
+        visual_desc = activity.get('visual_description')
+
+        # Skip if no visual description or if it's null/None
+        if not visual_desc or visual_desc == 'null' or visual_desc.lower() == 'none':
+            continue
+
+        # Search for an appropriate image
+        image_result = search_image_for_activity(visual_desc, subject_context)
+        if image_result:
+            activity['recommended_image'] = image_result
+
+    enhanced['activities'] = activities
+    return enhanced
+
+
 def load_marzano_framework():
     """Load the Marzano framework reference."""
     marzano_path = Path(__file__).parent.parent / ".claude" / "skills" / "lesson-designer" / "MARZANO.md"
@@ -556,6 +632,7 @@ Requirements:
 3. Include vocabulary terms with definitions (especially related to the confirmed knowledge above)
 4. Include an exit ticket or embedded assessment
 5. Activities should help students master the confirmed skills listed above
+6. For activities that would benefit from visuals, include a "visual_description" field describing what image/diagram would help
 
 Return a JSON object with this exact structure:
 {{
@@ -577,7 +654,8 @@ Return a JSON object with this exact structure:
             "instructions": ["Step 1", "Step 2"],
             "materials": ["Material 1"],
             "student_output": "What students produce",
-            "assessment_method": "How to assess"
+            "assessment_method": "How to assess",
+            "visual_description": "Description of helpful image/diagram (or null if not needed)"
         }}
     ],
     "hidden_slide_content": {{
@@ -616,6 +694,7 @@ SEQUENCE DESIGN REQUIREMENTS:
 5. Vocabulary should be distributed across lessons (introduce new terms progressively)
 6. Each lesson should have at least 40% higher-order thinking time
 7. The sequence should tell a coherent learning story
+8. For activities that would benefit from visuals, include a "visual_description" field
 
 Return a JSON object with this exact structure:
 {{
@@ -641,7 +720,8 @@ Return a JSON object with this exact structure:
                     "instructions": ["Step 1", "Step 2"],
                     "materials": ["Material 1"],
                     "student_output": "What students produce",
-                    "assessment_method": "How to assess"
+                    "assessment_method": "How to assess",
+                    "visual_description": "Description of helpful image/diagram (or null if not needed)"
                 }}
             ],
             "hidden_slide_content": {{
@@ -890,6 +970,115 @@ def escape_html(text: str) -> str:
     return text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;').replace('"', '&quot;')
 
 
+def format_single_lesson_html(lesson: dict, lesson_num: int = None) -> str:
+    """Format a single lesson as detailed HTML."""
+    parts = []
+
+    # Lesson header
+    title = escape_html(lesson.get('title', 'Untitled'))
+    objective = escape_html(lesson.get('objective', 'Not specified'))
+    lesson_type = escape_html(lesson.get('lesson_type', 'Not specified').replace('_', ' ').title())
+    duration = lesson.get('duration', lesson.get('duration_per_lesson', 0))
+
+    if lesson_num:
+        parts.append(f'''<div class="lesson-section" style="border-left: 4px solid {DARK_GREEN}; background: #f8faf8;">
+<h4 style="color: {DARK_GREEN}; font-size: 1.2rem;">📅 Lesson {lesson_num}: {title}</h4>''')
+    else:
+        parts.append(f'''<div class="lesson-section">
+<h4>📎 Lesson Overview</h4>
+<p><strong>Title:</strong> {title}</p>''')
+
+    parts.append(f'''<p><strong>Objective:</strong> {objective}</p>
+<p><strong>Type:</strong> {lesson_type}</p>
+<p><strong>Duration:</strong> {duration} minutes</p>
+</div>''')
+
+    # Vocabulary section
+    vocab = lesson.get('vocabulary', [])
+    if vocab:
+        vocab_items = ''.join([f"<li><strong>{escape_html(v.get('word', ''))}:</strong> {escape_html(v.get('definition', ''))}</li>" for v in vocab])
+        parts.append(f'<div class="lesson-section"><h4>📖 Key Vocabulary</h4><ul>{vocab_items}</ul></div>')
+
+    # Activities section with full detail
+    activities = lesson.get('activities', [])
+    if activities:
+        activity_cards = []
+        for i, act in enumerate(activities, 1):
+            level = act.get('marzano_level', 'unknown')
+            level_display = escape_html(level.replace('_', ' ').title())
+            name = escape_html(act.get('name', 'Activity'))
+            duration_act = act.get('duration', 0)
+            student_output = escape_html(act.get('student_output', 'Not specified'))
+
+            instructions = act.get('instructions', [])
+            instruction_items = ''.join([f"<li>{escape_html(step)}</li>" for step in instructions])
+
+            # Materials
+            materials = act.get('materials', [])
+            materials_html = ""
+            if materials:
+                materials_list = ''.join([f"<li>{escape_html(m)}</li>" for m in materials])
+                materials_html = f"<p><strong>Materials:</strong></p><ul>{materials_list}</ul>"
+
+            # Image recommendation if available
+            image_html = ""
+            image_rec = act.get('recommended_image', {})
+            if image_rec:
+                desc = escape_html(image_rec.get('description', ''))
+                url = image_rec.get('url', '')
+                if url:
+                    image_html = f'<p><strong>🖼️ Suggested Visual:</strong> {desc}<br><a href="{url}" target="_blank" style="color: #1976d2;">View/Download Image →</a></p>'
+                elif desc:
+                    image_html = f'<p><strong>🖼️ Suggested Visual:</strong> {desc}</p>'
+
+            card = f'''<div class="activity-card">
+<div class="activity-name">{i}. {name}</div>
+<div class="activity-meta">
+<span>⏱️ {duration_act} min</span>
+<span class="marzano-tag">{level_display}</span>
+</div>
+<p><strong>Instructions:</strong></p>
+<ol>{instruction_items}</ol>
+{materials_html}
+<p><strong>Student Output:</strong> {student_output}</p>
+{image_html}
+</div>'''
+            activity_cards.append(card)
+
+        parts.append(f'<div class="lesson-section"><h4>📋 Activities</h4>{"".join(activity_cards)}</div>')
+
+    # Assessment section
+    assessment = lesson.get('assessment', {})
+    if assessment:
+        assess_type = escape_html(assessment.get('type', 'exit_ticket').replace('_', ' ').title())
+        questions = assessment.get('questions', [])
+        question_items = ''.join([f"<li>{escape_html(q)}</li>" for q in questions])
+
+        parts.append(f'''<div class="lesson-section">
+<h4>✅ Assessment</h4>
+<p><strong>Type:</strong> {assess_type}</p>
+<p><strong>Questions:</strong></p>
+<ol>{question_items}</ol>
+</div>''')
+
+    # Hidden slide content (teacher tips)
+    hidden = lesson.get('hidden_slide_content', {})
+    if hidden:
+        misconceptions = hidden.get('misconceptions', [])
+        tips = hidden.get('delivery_tips', [])
+        if misconceptions or tips:
+            parts.append('<div class="lesson-section"><h4>💡 Teacher Notes</h4>')
+            if misconceptions:
+                misc_items = ''.join([f"<li>{escape_html(m)}</li>" for m in misconceptions])
+                parts.append(f'<p><strong>Watch for these misconceptions:</strong></p><ul>{misc_items}</ul>')
+            if tips:
+                tip_items = ''.join([f"<li>{escape_html(t)}</li>" for t in tips])
+                parts.append(f'<p><strong>Delivery tips:</strong></p><ul>{tip_items}</ul>')
+            parts.append('</div>')
+
+    return ''.join(parts)
+
+
 def format_lesson_display(lesson_or_sequence: dict) -> str:
     """Format lesson or sequence as readable HTML for teachers."""
     parts = []
@@ -904,7 +1093,7 @@ def format_lesson_display(lesson_or_sequence: dict) -> str:
         total_lessons = lesson_or_sequence.get('total_lessons', 0)
         duration = lesson_or_sequence.get('duration_per_lesson', 0)
 
-        parts.append(f'''<div class="lesson-section">
+        parts.append(f'''<div class="lesson-section" style="background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);">
 <h4>📚 Sequence Overview</h4>
 <p><strong>Title:</strong> {title}</p>
 <p><strong>Competency:</strong> {competency}</p>
@@ -912,94 +1101,16 @@ def format_lesson_display(lesson_or_sequence: dict) -> str:
 <p><strong>Overview:</strong> {overview}</p>
 </div>''')
 
-        # Each lesson in sequence
+        # Each lesson in sequence - FULL DETAIL
         for lesson in lesson_or_sequence.get('lessons', []):
             lesson_num = lesson.get('lesson_number', 0)
-            lesson_title = escape_html(lesson.get('title', 'Untitled'))
-            objective = escape_html(lesson.get('objective', 'Not specified'))
-            lesson_type = escape_html(lesson.get('lesson_type', 'Not specified').replace('_', ' ').title())
-
-            parts.append(f'''<div class="lesson-section" style="border-left-color: {LIGHT_GREEN};">
-<h4>📅 Lesson {lesson_num}: {lesson_title}</h4>
-<p><strong>Objective:</strong> {objective}</p>
-<p><strong>Type:</strong> {lesson_type}</p>''')
-
-            # Vocabulary for this lesson
-            vocab = lesson.get('vocabulary', [])
-            if vocab:
-                vocab_text = ', '.join([f"<em>{escape_html(v.get('word', ''))}</em>" for v in vocab])
-                parts.append(f'<p><strong>Vocabulary:</strong> {vocab_text}</p>')
-
-            # Activities summary
-            activities = lesson.get('activities', [])
-            if activities:
-                act_list = ', '.join([f"{escape_html(a.get('name', ''))} ({a.get('marzano_level', '').replace('_', ' ').title()})" for a in activities])
-                parts.append(f'<p><strong>Activities:</strong> {act_list}</p>')
-
+            parts.append(f'<div style="margin-top: 1.5rem; padding-top: 1rem; border-top: 2px dashed #e0e0e0;">')
+            parts.append(format_single_lesson_html(lesson, lesson_num))
             parts.append('</div>')
 
     else:
-        # Single lesson display
-        title = escape_html(lesson_or_sequence.get('title', 'Untitled'))
-        objective = escape_html(lesson_or_sequence.get('objective', 'Not specified'))
-        duration = lesson_or_sequence.get('duration', 0)
-        lesson_type = escape_html(lesson_or_sequence.get('lesson_type', 'Not specified').replace('_', ' ').title())
-
-        parts.append(f'''<div class="lesson-section">
-<h4>📎 Lesson Overview</h4>
-<p><strong>Title:</strong> {title}</p>
-<p><strong>Objective:</strong> {objective}</p>
-<p><strong>Duration:</strong> {duration} minutes</p>
-<p><strong>Type:</strong> {lesson_type}</p>
-</div>''')
-
-        # Vocabulary section
-        vocab = lesson_or_sequence.get('vocabulary', [])
-        if vocab:
-            vocab_items = ''.join([f"<li><strong>{escape_html(v.get('word', ''))}:</strong> {escape_html(v.get('definition', ''))}</li>" for v in vocab])
-            parts.append(f'<div class="lesson-section"><h4>📖 Key Vocabulary</h4><ul>{vocab_items}</ul></div>')
-
-        # Activities section
-        activities = lesson_or_sequence.get('activities', [])
-        if activities:
-            activity_cards = []
-            for i, act in enumerate(activities, 1):
-                level = act.get('marzano_level', 'unknown')
-                level_display = escape_html(level.replace('_', ' ').title())
-                name = escape_html(act.get('name', 'Activity'))
-                duration_act = act.get('duration', 0)
-                student_output = escape_html(act.get('student_output', 'Not specified'))
-
-                instructions = act.get('instructions', [])
-                instruction_items = ''.join([f"<li>{escape_html(step)}</li>" for step in instructions])
-
-                card = f'''<div class="activity-card">
-<div class="activity-name">{i}. {name}</div>
-<div class="activity-meta">
-<span>⏱️ {duration_act} min</span>
-<span class="marzano-tag">{level_display}</span>
-</div>
-<p><strong>Instructions:</strong></p>
-<ol>{instruction_items}</ol>
-<p><strong>Student Output:</strong> {student_output}</p>
-</div>'''
-                activity_cards.append(card)
-
-            parts.append(f'<div class="lesson-section"><h4>📋 Activities</h4>{"".join(activity_cards)}</div>')
-
-        # Assessment section
-        assessment = lesson_or_sequence.get('assessment', {})
-        if assessment:
-            assess_type = escape_html(assessment.get('type', 'exit_ticket').replace('_', ' ').title())
-            questions = assessment.get('questions', [])
-            question_items = ''.join([f"<li>{escape_html(q)}</li>" for q in questions])
-
-            parts.append(f'''<div class="lesson-section">
-<h4>✅ Assessment</h4>
-<p><strong>Type:</strong> {assess_type}</p>
-<p><strong>Questions:</strong></p>
-<ol>{question_items}</ol>
-</div>''')
+        # Single lesson - use the same detailed format
+        parts.append(format_single_lesson_html(lesson_or_sequence))
 
     return ''.join(parts)
 
@@ -1583,6 +1694,19 @@ elif st.session_state.stage == 3:
         try:
             marzano = load_marzano_framework()
             lesson = design_lesson_with_claude(input_data, marzano, confirmed_knowledge, confirmed_skills)
+
+            # Extract subject context from competency for better image search
+            subject_context = input_data.get('competency', '')[:50]
+
+            # Enhance lesson(s) with image recommendations
+            with st.spinner("🖼️ Finding recommended images for activities..."):
+                if lesson.get('is_sequence', False):
+                    # Process each lesson in sequence
+                    for i, single_lesson in enumerate(lesson.get('lessons', [])):
+                        lesson['lessons'][i] = process_lesson_images(single_lesson, subject_context)
+                else:
+                    lesson = process_lesson_images(lesson, subject_context)
+
             st.session_state.lesson_data["lesson"] = lesson
             st.session_state.stage = 4
             st.rerun()
