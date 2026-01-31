@@ -615,9 +615,80 @@ def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledg
         skills_items = [s["item"] for s in skills]
         skills_text = f"\n\nCONFIRMED SKILLS (students must be able to do these):\n" + "\n".join(f"- {s}" for s in skills_items)
 
+    # Subject-specific pedagogical guidance based on research
+    subject_pedagogy = """
+SUBJECT-SPECIFIC PEDAGOGY (Apply based on detected subject area):
+
+First, identify the PRIMARY SUBJECT AREA from the competency:
+- MATHEMATICS: equations, algebra, geometry, calculus, statistics, proofs, functions
+- SCIENCE: biology, chemistry, physics, earth science, experiments, phenomena, hypotheses
+- ELA: reading, writing, literature, essays, analysis of texts, grammar, rhetoric
+- HISTORY/SOCIAL STUDIES: historical events, primary sources, civilizations, government, economics
+- COMPUTER SCIENCE: programming, coding, algorithms, data structures, debugging, computational thinking
+
+Then apply the appropriate instructional sequence:
+
+FOR MATHEMATICS:
+- Instructional Model: Launch-Explore-Summarize (NOT I Do, We Do, You Do by default)
+- Launch (5-10 min): Present a rich problem or question that creates need-to-know
+- Explore (20-30 min): Students work on problem with productive struggle (15-30 min optimal)
+- Summarize (10-15 min): Class discussion to formalize understanding; teacher facilitates connections
+- EXCEPTION: Use direct instruction ONLY for conventions (notation, terminology) not for discoverable concepts
+- Key principle: Conceptual understanding must PRECEDE procedural fluency
+- Include: Multiple representations (concrete, visual, symbolic)
+
+FOR SCIENCE:
+- Instructional Model: 5E (Engage-Explore-Explain-Elaborate-Evaluate)
+- Engage (5 min): Anchoring phenomenon that creates wonder/questions
+- Explore (15-20 min): Hands-on investigation BEFORE formal explanation
+- Explain (10-15 min): Formalize concepts AFTER students have explored
+- Elaborate (10-15 min): Apply understanding to new situations
+- Evaluate (5-10 min): Formative assessment
+- Key principle: Students explore phenomena BEFORE teacher explains concepts
+- Include: Claim-Evidence-Reasoning (CER) for argumentation
+
+FOR ELA (Reading/Writing):
+- Instructional Model: Workshop (Mini-lesson → Work Time → Share)
+- Mini-lesson (10-15 min MAX): Focused instruction on ONE skill/strategy
+- Work Time (30-45 min): Students read/write independently with teacher conferring
+- Share (5-10 min): Students share work, reflect on learning
+- Key principle: 25% teacher instruction, 75% student practice
+- Include: Student choice in texts or response formats when possible
+- AVOID: Five-paragraph essay templates (use authentic purposes instead)
+
+FOR HISTORY/SOCIAL STUDIES:
+- Instructional Model: Inquiry Arc (Question → Investigate → Synthesize → Argue)
+- Compelling Question (5 min): Open-ended question that drives investigation
+- Background Context (5-10 min): Just-in-time background, NOT comprehensive lecture
+- Document Analysis (20-25 min): Students analyze 2-4 primary sources (more for advanced)
+- Synthesis/Argumentation (10-15 min): Students construct evidence-based arguments
+- Key principle: Students investigate sources BEFORE being told "the answer"
+- Include: Sourcing, contextualization, corroboration skills
+- Balance: 20-30% direct instruction, 50-60% inquiry, 20-30% synthesis
+
+FOR COMPUTER SCIENCE:
+- Instructional Model: PRIMM (Predict-Run-Investigate-Modify-Make)
+- Predict (5 min): Students predict what code will do BEFORE running it
+- Run (2 min): Execute code, compare prediction to actual output
+- Investigate (10 min): Trace through code, answer comprehension questions
+- Modify (15 min): Make targeted changes to existing code (scaffolded)
+- Make (15 min): Create new code applying the concept
+- Key principle: Code READING must precede code WRITING
+- Include: Parsons problems (reordering code), debugging activities
+- For syntax: Direct instruction is appropriate
+- For problem-solving: Guided exploration is more effective
+
+IMPORTANT: Use the "instructional_phase" field with SUBJECT-APPROPRIATE phases:
+- For Math: "launch", "explore", "summarize"
+- For Science: "engage", "explore", "explain", "elaborate", "evaluate"
+- For ELA: "mini_lesson", "work_time", "conferring", "share"
+- For History: "question", "background", "investigate", "synthesize"
+- For CS: "predict", "run", "investigate", "modify", "make"
+"""
+
     if lesson_count == 1:
         # Single lesson design
-        prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy.
+        prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy and SUBJECT-SPECIFIC pedagogical approaches.
 
 Design a complete lesson based on this input:
 - Competency: {input_data['competency']}
@@ -626,22 +697,44 @@ Design a complete lesson based on this input:
 - Lesson Type: {input_data['lesson_type']}
 - Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}
 
-Requirements:
-1. Include activities at multiple Marzano levels (retrieval, comprehension, analysis, knowledge_utilization)
-2. At least 40% of time should be higher-order thinking (analysis + knowledge_utilization)
-3. Include vocabulary terms with definitions (especially related to the confirmed knowledge above)
-4. Include an exit ticket or embedded assessment
-5. Activities should help students master the confirmed skills listed above
-6. For activities that would benefit from visuals, include a "visual_description" field describing what image/diagram would help
+{subject_pedagogy}
+
+INSTRUCTIONAL DESIGN REQUIREMENTS:
+1. FIRST: Identify the subject area from the competency (Math, Science, ELA, History, CS)
+2. THEN: Apply the subject-appropriate instructional sequence from the pedagogy guide above
+3. Include activities at multiple Marzano levels (retrieval, comprehension, analysis, knowledge_utilization)
+4. At least 40% of time should be higher-order thinking (analysis + knowledge_utilization)
+5. Include vocabulary terms with definitions
+6. Include an exit ticket or embedded assessment
+7. For activities that would benefit from visuals, include a "visual_description" field
+
+CRITICAL: Do NOT default to "I Do, We Do, You Do" for all subjects.
+- For Math/Science/History: Students should EXPLORE or INVESTIGATE before teacher explains
+- For ELA: Mini-lesson should be SHORT (10-15 min max), then extended student work time
+- For CS: Students PREDICT and READ code before writing code
+
+TASK VARIETY REQUIREMENTS:
+- Use different task_types: worked_example, guided_practice, collaborative, individual, productive_struggle, retrieval_practice, discussion_protocol, creation, inquiry, investigation
+- Vary grouping structures: whole_class, pairs, small_groups, individual
+- Include at least one collaborative learning structure
+- Include differentiation support for each activity
+
+ENGAGEMENT DESIGN (based on Self-Determination Theory):
+- Include choice elements where students have autonomy
+- Make relevance to students' lives explicit
+- Scaffold challenge appropriately (productive struggle, not frustration)
 
 Return a JSON object with this exact structure:
 {{
     "is_sequence": false,
+    "subject_area": "math|science|ela|history|cs|other",
+    "instructional_model": "The subject-specific model used (e.g., 'Launch-Explore-Summarize', '5E', 'Workshop', 'Inquiry Arc', 'PRIMM')",
     "title": "Lesson title",
     "grade_level": "{input_data['grade_level']}",
     "duration": {input_data['duration']},
     "lesson_type": "{input_data['lesson_type']}",
     "objective": "Students will be able to...",
+    "essential_question": "Overarching inquiry question that drives the lesson",
     "vocabulary": [
         {{"word": "term1", "definition": "definition1"}},
         {{"word": "term2", "definition": "definition2"}}
@@ -649,25 +742,68 @@ Return a JSON object with this exact structure:
     "activities": [
         {{
             "name": "Activity Name",
+            "task_type": "worked_example|guided_practice|collaborative|individual|productive_struggle|retrieval_practice|discussion_protocol|creation|inquiry|investigation",
             "duration": 10,
             "marzano_level": "retrieval|comprehension|analysis|knowledge_utilization",
+            "grouping": "whole_class|pairs|small_groups|individual",
+            "instructional_phase": "Use subject-appropriate phase (e.g., 'launch', 'explore', 'explain', 'mini_lesson', 'investigate', 'predict')",
             "instructions": ["Step 1", "Step 2"],
+            "teacher_moves": ["What teacher does during this activity"],
             "materials": ["Material 1"],
+            "material_format": "worksheet|graphic_organizer|discussion_protocol|choice_board|lab_sheet|digital_interactive|manipulative|primary_source|code_template|none",
             "student_output": "What students produce",
             "assessment_method": "How to assess",
+            "differentiation": {{
+                "support": "Scaffold for struggling learners",
+                "extension": "Challenge for advanced learners"
+            }},
+            "engagement_hook": {{
+                "relevance": "Why this matters to students",
+                "choice_element": "Where students have autonomy (or null)"
+            }},
             "visual_description": "Description of helpful image/diagram (or null if not needed)"
         }}
     ],
-    "hidden_slide_content": {{
-        "objective": "Learning objective",
+    "slide_content": {{
+        "opening_hook": "Engaging question, scenario, or visual to start the lesson",
+        "essential_question_display": "How the essential question should appear on slides",
         "agenda": [{{"activity": "Name", "duration": 10}}],
+        "discussion_prompts": [
+            {{
+                "after_activity": "Activity Name",
+                "prompt": "Turn-and-talk or discussion question",
+                "expected_responses": ["What students might say"]
+            }}
+        ],
+        "worked_examples": [
+            {{
+                "concept": "What this demonstrates",
+                "example": "Step-by-step walkthrough",
+                "common_errors": ["Error to address and correct"]
+            }}
+        ],
+        "check_for_understanding": [
+            {{
+                "timing": "After which activity",
+                "question": "Quick check question",
+                "success_looks_like": "What correct understanding looks like"
+            }}
+        ],
+        "key_visuals": ["Description of diagram, chart, or image needed for slides"],
         "misconceptions": ["Common misconception 1"],
-        "delivery_tips": ["Tip 1"]
+        "delivery_tips": ["Tip 1"],
+        "transitions": ["Transition statement between major activities"],
+        "scaffolding_notes": {{
+            "struggling_learners": "Support strategies during instruction",
+            "accelerated_learners": "Extension opportunities during instruction"
+        }},
+        "closure_synthesis": "How to tie everything together at the end"
     }},
     "assessment": {{
         "type": "exit_ticket",
         "description": "Brief description",
-        "questions": ["Question 1", "Question 2"]
+        "questions": ["Question 1", "Question 2"],
+        "success_criteria": "What mastery looks like"
     }}
 }}
 
@@ -677,7 +813,7 @@ MARZANO FRAMEWORK REFERENCE:
 Return ONLY the JSON object, no other text."""
     else:
         # Multi-lesson sequence design
-        prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy.
+        prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy and SUBJECT-SPECIFIC pedagogical approaches.
 
 Design a {lesson_count}-LESSON SEQUENCE based on this input:
 - Competency: {input_data['competency']}
@@ -686,60 +822,127 @@ Design a {lesson_count}-LESSON SEQUENCE based on this input:
 - Total lessons: {lesson_count}
 - Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}
 
+{subject_pedagogy}
+
 SEQUENCE DESIGN REQUIREMENTS:
-1. Each lesson should have a DISTINCT objective that builds toward the overall competency
-2. Lesson 1 should focus more on retrieval/comprehension (introducing concepts)
-3. Middle lessons should build analysis skills
-4. Final lesson should emphasize knowledge utilization and synthesis
-5. Vocabulary should be distributed across lessons (introduce new terms progressively)
-6. Each lesson should have at least 40% higher-order thinking time
-7. The sequence should tell a coherent learning story
-8. For activities that would benefit from visuals, include a "visual_description" field
+1. FIRST: Identify the subject area from the competency (Math, Science, ELA, History, CS)
+2. THEN: Apply the subject-appropriate instructional sequence WITHIN each lesson
+3. Each lesson should have a DISTINCT objective that builds toward the overall competency
+4. Vocabulary should be distributed across lessons (introduce new terms progressively)
+5. Each lesson should have at least 40% higher-order thinking time
+6. The sequence should tell a coherent learning story
+7. Include spaced retrieval practice - each lesson should briefly review key concepts from previous lessons
+
+CRITICAL: Do NOT default to "I Do, We Do, You Do" for all subjects.
+- For Math: Use Launch-Explore-Summarize; students explore problems before teacher formalizes
+- For Science: Use 5E model; students explore phenomena BEFORE teacher explains
+- For ELA: Use Workshop model; short mini-lesson then extended student work time
+- For History: Use Inquiry Arc; students investigate sources before being told conclusions
+- For CS: Use PRIMM; students predict/read code before writing code
+
+TASK VARIETY REQUIREMENTS (use diverse task types across the sequence):
+- Use different task_types: worked_example, guided_practice, collaborative, individual, productive_struggle, retrieval_practice, discussion_protocol, creation, inquiry, investigation
+- Vary grouping structures: whole_class, pairs, small_groups, individual
+- Include at least one collaborative learning structure per lesson
+- Include differentiation support for each activity
+- Vary material formats: worksheet, graphic_organizer, discussion_protocol, choice_board, lab_sheet, digital_interactive, primary_source, code_template
+
+ENGAGEMENT DESIGN (based on Self-Determination Theory):
+- Include choice elements where students have autonomy
+- Make relevance to students' lives explicit
+- Scaffold challenge appropriately (productive struggle, not frustration)
 
 Return a JSON object with this exact structure:
 {{
     "is_sequence": true,
+    "subject_area": "math|science|ela|history|cs|other",
+    "instructional_model": "The subject-specific model used consistently across lessons",
     "sequence_title": "Overall sequence title",
     "competency": "{input_data['competency']}",
     "grade_level": "{input_data['grade_level']}",
     "total_lessons": {lesson_count},
     "duration_per_lesson": {input_data['duration']},
     "sequence_overview": "Brief description of how the lessons build toward mastery",
+    "essential_question": "Overarching inquiry question that drives the entire sequence",
     "lessons": [
         {{
             "lesson_number": 1,
             "title": "Lesson 1 title",
             "lesson_type": "introducing",
             "objective": "Lesson 1 specific objective",
+            "connection_to_previous": "How this connects to prior learning (null for lesson 1)",
             "vocabulary": [{{"word": "term1", "definition": "def1"}}],
             "activities": [
                 {{
                     "name": "Activity Name",
+                    "task_type": "worked_example|guided_practice|collaborative|individual|productive_struggle|retrieval_practice|discussion_protocol|creation|inquiry|investigation",
                     "duration": 10,
                     "marzano_level": "retrieval|comprehension|analysis|knowledge_utilization",
+                    "grouping": "whole_class|pairs|small_groups|individual",
+                    "instructional_phase": "Use subject-appropriate phase (e.g., 'launch', 'explore', 'explain', 'mini_lesson', 'investigate', 'predict')",
                     "instructions": ["Step 1", "Step 2"],
+                    "teacher_moves": ["What teacher does during this activity"],
                     "materials": ["Material 1"],
+                    "material_format": "worksheet|graphic_organizer|discussion_protocol|choice_board|lab_sheet|digital_interactive|manipulative|primary_source|code_template|none",
                     "student_output": "What students produce",
                     "assessment_method": "How to assess",
+                    "differentiation": {{
+                        "support": "Scaffold for struggling learners",
+                        "extension": "Challenge for advanced learners"
+                    }},
+                    "engagement_hook": {{
+                        "relevance": "Why this matters to students",
+                        "choice_element": "Where students have autonomy (or null)"
+                    }},
                     "visual_description": "Description of helpful image/diagram (or null if not needed)"
                 }}
             ],
-            "hidden_slide_content": {{
-                "objective": "Learning objective",
+            "slide_content": {{
+                "opening_hook": "Engaging question, scenario, or visual to start",
+                "retrieval_from_previous": "Quick review question from previous lesson (null for lesson 1)",
                 "agenda": [{{"activity": "Name", "duration": 10}}],
-                "misconceptions": ["Common misconception 1"],
-                "delivery_tips": ["Tip 1"]
+                "discussion_prompts": [
+                    {{
+                        "after_activity": "Activity Name",
+                        "prompt": "Turn-and-talk or discussion question",
+                        "expected_responses": ["What students might say"]
+                    }}
+                ],
+                "worked_examples": [
+                    {{
+                        "concept": "What this demonstrates",
+                        "example": "Step-by-step walkthrough",
+                        "common_errors": ["Error to address and correct"]
+                    }}
+                ],
+                "check_for_understanding": [
+                    {{
+                        "timing": "After which activity",
+                        "question": "Quick check question",
+                        "success_looks_like": "What correct understanding looks like"
+                    }}
+                ],
+                "key_visuals": ["Description of diagram, chart, or image needed"],
+                "misconceptions": ["Common misconception to address"],
+                "delivery_tips": ["Instructional tip"],
+                "transitions": ["Transition statement between activities"],
+                "scaffolding_notes": {{
+                    "struggling_learners": "Support strategies",
+                    "accelerated_learners": "Extension opportunities"
+                }},
+                "closure_synthesis": "How to tie this lesson together"
             }},
             "assessment": {{
                 "type": "exit_ticket",
                 "description": "Brief description",
-                "questions": ["Question 1"]
+                "questions": ["Question 1"],
+                "success_criteria": "What mastery looks like"
             }}
         }}
     ]
 }}
 
-Include {lesson_count} lesson objects in the "lessons" array.
+Include {lesson_count} lesson objects in the "lessons" array. Ensure VARIETY in task_types and material_formats across lessons.
 
 MARZANO FRAMEWORK REFERENCE:
 {marzano_framework[:2500]}
@@ -748,7 +951,7 @@ Return ONLY the JSON object, no other text."""
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
-        max_tokens=8000,
+        max_tokens=12000,
         messages=[{"role": "user", "content": prompt}]
     )
 
@@ -979,6 +1182,9 @@ def format_single_lesson_html(lesson: dict, lesson_num: int = None) -> str:
     objective = escape_html(lesson.get('objective', 'Not specified'))
     lesson_type = escape_html(lesson.get('lesson_type', 'Not specified').replace('_', ' ').title())
     duration = lesson.get('duration', lesson.get('duration_per_lesson', 0))
+    essential_question = lesson.get('essential_question', '')
+    subject_area = lesson.get('subject_area', '')
+    instructional_model = lesson.get('instructional_model', '')
 
     if lesson_num:
         parts.append(f'''<div class="lesson-section" style="border-left: 4px solid {DARK_GREEN}; background: #f8faf8;">
@@ -990,8 +1196,27 @@ def format_single_lesson_html(lesson: dict, lesson_num: int = None) -> str:
 
     parts.append(f'''<p><strong>Objective:</strong> {objective}</p>
 <p><strong>Type:</strong> {lesson_type}</p>
-<p><strong>Duration:</strong> {duration} minutes</p>
-</div>''')
+<p><strong>Duration:</strong> {duration} minutes</p>''')
+
+    # Show subject-specific instructional model if present
+    if subject_area or instructional_model:
+        model_info = []
+        if subject_area:
+            subject_labels = {'math': 'Mathematics', 'science': 'Science', 'ela': 'English Language Arts', 'history': 'History/Social Studies', 'cs': 'Computer Science', 'other': 'General'}
+            model_info.append(f"<strong>Subject:</strong> {subject_labels.get(subject_area, subject_area.title())}")
+        if instructional_model:
+            model_info.append(f"<strong>Instructional Model:</strong> {escape_html(instructional_model)}")
+        parts.append(f'<p>{" | ".join(model_info)}</p>')
+
+    if essential_question:
+        parts.append(f'<p><strong>Essential Question:</strong> <em>{escape_html(essential_question)}</em></p>')
+
+    # Connection to previous lesson (for sequences)
+    connection = lesson.get('connection_to_previous')
+    if connection:
+        parts.append(f'<p><strong>Connection to Previous:</strong> {escape_html(connection)}</p>')
+
+    parts.append('</div>')
 
     # Vocabulary section
     vocab = lesson.get('vocabulary', [])
@@ -1010,15 +1235,77 @@ def format_single_lesson_html(lesson: dict, lesson_num: int = None) -> str:
             duration_act = act.get('duration', 0)
             student_output = escape_html(act.get('student_output', 'Not specified'))
 
+            # New task variety fields
+            task_type = act.get('task_type', '')
+            task_type_display = escape_html(task_type.replace('_', ' ').title()) if task_type else ''
+            grouping = act.get('grouping', '')
+            grouping_display = escape_html(grouping.replace('_', ' ').title()) if grouping else ''
+            # Instructional phase (subject-specific) - fallback to gradual_release_phase for backward compatibility
+            instructional_phase = act.get('instructional_phase', act.get('gradual_release_phase', ''))
+            # Map common phase names to display labels
+            phase_labels = {
+                # Math: Launch-Explore-Summarize
+                'launch': 'Launch', 'explore': 'Explore', 'summarize': 'Summarize',
+                # Science: 5E
+                'engage': 'Engage', 'explain': 'Explain', 'elaborate': 'Elaborate', 'evaluate': 'Evaluate',
+                # ELA: Workshop
+                'mini_lesson': 'Mini-Lesson', 'work_time': 'Work Time', 'conferring': 'Conferring', 'share': 'Share',
+                # History: Inquiry Arc
+                'question': 'Question', 'background': 'Background', 'investigate': 'Investigate', 'synthesize': 'Synthesize',
+                # CS: PRIMM
+                'predict': 'Predict', 'run': 'Run', 'modify': 'Modify', 'make': 'Make',
+                # Legacy GRR (still supported)
+                'i_do': 'I Do', 'we_do': 'We Do', 'you_do_together': 'You Do Together', 'you_do_alone': 'You Do Alone'
+            }
+            phase_display = phase_labels.get(instructional_phase, instructional_phase.replace('_', ' ').title()) if instructional_phase else ''
+            material_format = act.get('material_format', '')
+            material_format_display = escape_html(material_format.replace('_', ' ').title()) if material_format else ''
+
             instructions = act.get('instructions', [])
             instruction_items = ''.join([f"<li>{escape_html(step)}</li>" for step in instructions])
+
+            # Teacher moves
+            teacher_moves = act.get('teacher_moves', [])
+            teacher_moves_html = ""
+            if teacher_moves:
+                moves_list = ''.join([f"<li>{escape_html(m)}</li>" for m in teacher_moves])
+                teacher_moves_html = f"<p><strong>Teacher Moves:</strong></p><ul>{moves_list}</ul>"
 
             # Materials
             materials = act.get('materials', [])
             materials_html = ""
             if materials:
                 materials_list = ''.join([f"<li>{escape_html(m)}</li>" for m in materials])
-                materials_html = f"<p><strong>Materials:</strong></p><ul>{materials_list}</ul>"
+                format_note = f" <em>({material_format_display})</em>" if material_format_display and material_format != 'none' else ""
+                materials_html = f"<p><strong>Materials{format_note}:</strong></p><ul>{materials_list}</ul>"
+
+            # Differentiation
+            diff = act.get('differentiation', {})
+            diff_html = ""
+            if diff:
+                support = diff.get('support', '')
+                extension = diff.get('extension', '')
+                if support or extension:
+                    diff_html = '<p><strong>Differentiation:</strong></p><ul>'
+                    if support:
+                        diff_html += f'<li><em>Support:</em> {escape_html(support)}</li>'
+                    if extension:
+                        diff_html += f'<li><em>Extension:</em> {escape_html(extension)}</li>'
+                    diff_html += '</ul>'
+
+            # Engagement hooks
+            engagement = act.get('engagement_hook', {})
+            engagement_html = ""
+            if engagement:
+                relevance = engagement.get('relevance', '')
+                choice = engagement.get('choice_element', '')
+                if relevance or (choice and choice != 'null'):
+                    engagement_html = '<p><strong>Engagement Design:</strong></p><ul>'
+                    if relevance:
+                        engagement_html += f'<li><em>Relevance:</em> {escape_html(relevance)}</li>'
+                    if choice and choice != 'null':
+                        engagement_html += f'<li><em>Student Choice:</em> {escape_html(choice)}</li>'
+                    engagement_html += '</ul>'
 
             # Image recommendation if available
             image_html = ""
@@ -1031,15 +1318,26 @@ def format_single_lesson_html(lesson: dict, lesson_num: int = None) -> str:
                 elif desc:
                     image_html = f'<p><strong>🖼️ Suggested Visual:</strong> {desc}</p>'
 
+            # Build activity metadata tags
+            meta_tags = [f'<span>⏱️ {duration_act} min</span>', f'<span class="marzano-tag">{level_display}</span>']
+            if task_type_display:
+                meta_tags.append(f'<span style="background: #e3f2fd; color: #1565c0; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">{task_type_display}</span>')
+            if grouping_display:
+                meta_tags.append(f'<span style="background: #fff3e0; color: #e65100; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">👥 {grouping_display}</span>')
+            if phase_display:
+                meta_tags.append(f'<span style="background: #f3e5f5; color: #7b1fa2; padding: 2px 8px; border-radius: 12px; font-size: 0.75rem;">{phase_display}</span>')
+
             card = f'''<div class="activity-card">
 <div class="activity-name">{i}. {name}</div>
-<div class="activity-meta">
-<span>⏱️ {duration_act} min</span>
-<span class="marzano-tag">{level_display}</span>
+<div class="activity-meta" style="flex-wrap: wrap; gap: 6px;">
+{' '.join(meta_tags)}
 </div>
 <p><strong>Instructions:</strong></p>
 <ol>{instruction_items}</ol>
+{teacher_moves_html}
 {materials_html}
+{diff_html}
+{engagement_html}
 <p><strong>Student Output:</strong> {student_output}</p>
 {image_html}
 </div>'''
@@ -1053,28 +1351,120 @@ def format_single_lesson_html(lesson: dict, lesson_num: int = None) -> str:
         assess_type = escape_html(assessment.get('type', 'exit_ticket').replace('_', ' ').title())
         questions = assessment.get('questions', [])
         question_items = ''.join([f"<li>{escape_html(q)}</li>" for q in questions])
+        success_criteria = assessment.get('success_criteria', '')
 
         parts.append(f'''<div class="lesson-section">
 <h4>✅ Assessment</h4>
 <p><strong>Type:</strong> {assess_type}</p>
 <p><strong>Questions:</strong></p>
-<ol>{question_items}</ol>
-</div>''')
+<ol>{question_items}</ol>''')
+        if success_criteria:
+            parts.append(f'<p><strong>Success Criteria:</strong> {escape_html(success_criteria)}</p>')
+        parts.append('</div>')
 
-    # Hidden slide content (teacher tips)
-    hidden = lesson.get('hidden_slide_content', {})
-    if hidden:
-        misconceptions = hidden.get('misconceptions', [])
-        tips = hidden.get('delivery_tips', [])
-        if misconceptions or tips:
-            parts.append('<div class="lesson-section"><h4>💡 Teacher Notes</h4>')
-            if misconceptions:
-                misc_items = ''.join([f"<li>{escape_html(m)}</li>" for m in misconceptions])
-                parts.append(f'<p><strong>Watch for these misconceptions:</strong></p><ul>{misc_items}</ul>')
-            if tips:
-                tip_items = ''.join([f"<li>{escape_html(t)}</li>" for t in tips])
-                parts.append(f'<p><strong>Delivery tips:</strong></p><ul>{tip_items}</ul>')
-            parts.append('</div>')
+    # Enhanced slide content (new schema) or hidden_slide_content (legacy)
+    slide_content = lesson.get('slide_content', lesson.get('hidden_slide_content', {}))
+    if slide_content:
+        parts.append('<div class="lesson-section" style="background: #fffde7; border-left: 4px solid #fbc02d;"><h4>🎯 Slide Content & Teacher Notes</h4>')
+
+        # Opening hook
+        opening_hook = slide_content.get('opening_hook', '')
+        if opening_hook:
+            parts.append(f'<p><strong>Opening Hook:</strong> {escape_html(opening_hook)}</p>')
+
+        # Retrieval from previous (for sequences)
+        retrieval = slide_content.get('retrieval_from_previous', '')
+        if retrieval and retrieval != 'null':
+            parts.append(f'<p><strong>Review from Previous:</strong> {escape_html(retrieval)}</p>')
+
+        # Discussion prompts
+        discussion_prompts = slide_content.get('discussion_prompts', [])
+        if discussion_prompts:
+            parts.append('<p><strong>Discussion Prompts:</strong></p><ul>')
+            for dp in discussion_prompts:
+                prompt_text = escape_html(dp.get('prompt', ''))
+                after = escape_html(dp.get('after_activity', ''))
+                expected = dp.get('expected_responses', [])
+                expected_text = ', '.join([escape_html(e) for e in expected[:2]]) if expected else ''
+                parts.append(f'<li><em>After {after}:</em> "{prompt_text}"')
+                if expected_text:
+                    parts.append(f' <small>(expect: {expected_text})</small>')
+                parts.append('</li>')
+            parts.append('</ul>')
+
+        # Worked examples
+        worked_examples = slide_content.get('worked_examples', [])
+        if worked_examples:
+            parts.append('<p><strong>Worked Examples for Slides:</strong></p>')
+            for we in worked_examples:
+                concept = escape_html(we.get('concept', ''))
+                example = escape_html(we.get('example', ''))
+                errors = we.get('common_errors', [])
+                parts.append(f'<div style="background: #fff; padding: 10px; margin: 5px 0; border-radius: 4px;">')
+                parts.append(f'<p><em>{concept}</em></p>')
+                parts.append(f'<p>{example}</p>')
+                if errors:
+                    error_text = ', '.join([escape_html(e) for e in errors])
+                    parts.append(f'<p><small>⚠️ Watch for: {error_text}</small></p>')
+                parts.append('</div>')
+
+        # Check for understanding
+        cfu = slide_content.get('check_for_understanding', [])
+        if cfu:
+            parts.append('<p><strong>Check for Understanding:</strong></p><ul>')
+            for check in cfu:
+                timing = escape_html(check.get('timing', ''))
+                question = escape_html(check.get('question', ''))
+                success = escape_html(check.get('success_looks_like', ''))
+                parts.append(f'<li><em>{timing}:</em> {question}')
+                if success:
+                    parts.append(f' <small>(success: {success})</small>')
+                parts.append('</li>')
+            parts.append('</ul>')
+
+        # Key visuals needed
+        key_visuals = slide_content.get('key_visuals', [])
+        if key_visuals:
+            visuals_list = ''.join([f"<li>{escape_html(v)}</li>" for v in key_visuals])
+            parts.append(f'<p><strong>Key Visuals Needed:</strong></p><ul>{visuals_list}</ul>')
+
+        # Misconceptions
+        misconceptions = slide_content.get('misconceptions', [])
+        if misconceptions:
+            misc_items = ''.join([f"<li>{escape_html(m)}</li>" for m in misconceptions])
+            parts.append(f'<p><strong>Watch for Misconceptions:</strong></p><ul>{misc_items}</ul>')
+
+        # Delivery tips
+        tips = slide_content.get('delivery_tips', [])
+        if tips:
+            tip_items = ''.join([f"<li>{escape_html(t)}</li>" for t in tips])
+            parts.append(f'<p><strong>Delivery Tips:</strong></p><ul>{tip_items}</ul>')
+
+        # Transitions
+        transitions = slide_content.get('transitions', [])
+        if transitions:
+            trans_items = ''.join([f"<li>{escape_html(t)}</li>" for t in transitions])
+            parts.append(f'<p><strong>Transition Statements:</strong></p><ul>{trans_items}</ul>')
+
+        # Scaffolding notes
+        scaffolding = slide_content.get('scaffolding_notes', {})
+        if scaffolding:
+            struggling = scaffolding.get('struggling_learners', '')
+            accelerated = scaffolding.get('accelerated_learners', '')
+            if struggling or accelerated:
+                parts.append('<p><strong>Scaffolding During Instruction:</strong></p><ul>')
+                if struggling:
+                    parts.append(f'<li><em>For struggling learners:</em> {escape_html(struggling)}</li>')
+                if accelerated:
+                    parts.append(f'<li><em>For accelerated learners:</em> {escape_html(accelerated)}</li>')
+                parts.append('</ul>')
+
+        # Closure synthesis
+        closure = slide_content.get('closure_synthesis', '')
+        if closure:
+            parts.append(f'<p><strong>Closure/Synthesis:</strong> {escape_html(closure)}</p>')
+
+        parts.append('</div>')
 
     return ''.join(parts)
 
@@ -1090,14 +1480,31 @@ def format_lesson_display(lesson_or_sequence: dict) -> str:
         title = escape_html(lesson_or_sequence.get('sequence_title', 'Untitled Sequence'))
         competency = escape_html(lesson_or_sequence.get('competency', 'Not specified'))
         overview = escape_html(lesson_or_sequence.get('sequence_overview', ''))
+        essential_question = lesson_or_sequence.get('essential_question', '')
         total_lessons = lesson_or_sequence.get('total_lessons', 0)
         duration = lesson_or_sequence.get('duration_per_lesson', 0)
+        subject_area = lesson_or_sequence.get('subject_area', '')
+        instructional_model = lesson_or_sequence.get('instructional_model', '')
 
         parts.append(f'''<div class="lesson-section" style="background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);">
 <h4>📚 Sequence Overview</h4>
 <p><strong>Title:</strong> {title}</p>
 <p><strong>Competency:</strong> {competency}</p>
-<p><strong>Duration:</strong> {total_lessons} lessons × {duration} minutes</p>
+<p><strong>Duration:</strong> {total_lessons} lessons × {duration} minutes</p>''')
+
+        # Show subject-specific instructional model for sequence
+        if subject_area or instructional_model:
+            subject_labels = {'math': 'Mathematics', 'science': 'Science', 'ela': 'English Language Arts', 'history': 'History/Social Studies', 'cs': 'Computer Science', 'other': 'General'}
+            model_parts = []
+            if subject_area:
+                model_parts.append(f"<strong>Subject:</strong> {subject_labels.get(subject_area, subject_area.title())}")
+            if instructional_model:
+                model_parts.append(f"<strong>Instructional Model:</strong> {escape_html(instructional_model)}")
+            parts.append(f'<p>{" | ".join(model_parts)}</p>')
+
+        if essential_question:
+            parts.append(f'<p><strong>Essential Question:</strong> <em>{escape_html(essential_question)}</em></p>')
+        parts.append(f'''
 <p><strong>Overview:</strong> {overview}</p>
 </div>''')
 
