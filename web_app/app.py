@@ -23,6 +23,11 @@ from validate_marzano import validate_lesson
 from generate_worksheet import generate_worksheet
 from generate_slides import generate_slides
 
+# Import docx for text-to-word conversion
+from docx import Document
+from docx.shared import Pt, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
+
 # Page config
 st.set_page_config(
     page_title="Lesson Designer | CompSci High",
@@ -1717,6 +1722,57 @@ Note: Students should complete the core worksheet first, then work on these exte
     return response.content[0].text
 
 
+def text_to_word_document(text: str, output_path: str, title: str = "Worksheet") -> None:
+    """Convert plain text worksheet content to a formatted Word document."""
+    doc = Document()
+
+    # Set narrow margins
+    for section in doc.sections:
+        section.top_margin = Inches(0.5)
+        section.bottom_margin = Inches(0.5)
+        section.left_margin = Inches(0.75)
+        section.right_margin = Inches(0.75)
+
+    lines = text.split('\n')
+
+    for line in lines:
+        line = line.rstrip()
+
+        # Skip empty lines but add paragraph for spacing
+        if not line:
+            doc.add_paragraph()
+            continue
+
+        # Detect headers (lines with === underneath or ALL CAPS headers)
+        if line.startswith('===') or line.startswith('---'):
+            continue  # Skip separator lines
+
+        # Check if this is a main header (ALL CAPS or starts with specific patterns)
+        is_main_header = (line.isupper() and len(line) > 5) or line.startswith('MODIFIED WORKSHEET') or line.startswith('EXTENSION WORKSHEET')
+        is_section_header = line.endswith(':') and len(line) < 50 and not line.startswith('-')
+
+        p = doc.add_paragraph()
+        run = p.add_run(line)
+
+        if is_main_header:
+            run.bold = True
+            run.font.size = Pt(14)
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        elif is_section_header:
+            run.bold = True
+            run.font.size = Pt(11)
+        elif line.startswith('- ') or line.startswith('• '):
+            run.font.size = Pt(10)
+            p.paragraph_format.left_indent = Inches(0.25)
+        elif line[0:3].replace('.', '').replace(')', '').isdigit():
+            # Numbered items
+            run.font.size = Pt(10)
+        else:
+            run.font.size = Pt(10)
+
+    doc.save(output_path)
+
+
 # ============================================
 # SIDEBAR
 # ============================================
@@ -2434,9 +2490,9 @@ elif st.session_state.stage == 5:
             with st.spinner("📝 Generating modified materials for struggling learners..."):
                 try:
                     modified_content = generate_modified_worksheet(lesson_or_sequence, alex_concerns)
-                    modified_path = temp_dir / "worksheet_modified.txt"
-                    with open(modified_path, 'w', encoding='utf-8') as f:
-                        f.write(modified_content)
+                    modified_path = temp_dir / "worksheet_modified.docx"
+                    lesson_title = lesson_or_sequence.get('title', lesson_or_sequence.get('sequence_title', 'Lesson'))
+                    text_to_word_document(modified_content, str(modified_path), f"Modified - {lesson_title}")
                     st.session_state.lesson_data["modified_worksheet_path"] = str(modified_path)
                 except Exception as e:
                     st.error(f"Error generating modified worksheet: {e}")
@@ -2448,9 +2504,9 @@ elif st.session_state.stage == 5:
             with st.spinner("🚀 Generating extension materials for advanced learners..."):
                 try:
                     extension_content = generate_extension_worksheet(lesson_or_sequence, marcus_concerns)
-                    extension_path = temp_dir / "worksheet_extension.txt"
-                    with open(extension_path, 'w', encoding='utf-8') as f:
-                        f.write(extension_content)
+                    extension_path = temp_dir / "worksheet_extension.docx"
+                    lesson_title = lesson_or_sequence.get('title', lesson_or_sequence.get('sequence_title', 'Lesson'))
+                    text_to_word_document(extension_content, str(extension_path), f"Extension - {lesson_title}")
                     st.session_state.lesson_data["extension_worksheet_path"] = str(extension_path)
                 except Exception as e:
                     st.error(f"Error generating extension worksheet: {e}")
@@ -2573,43 +2629,37 @@ elif st.session_state.stage == 6:
             if modified_path and Path(modified_path).exists():
                 st.markdown(f"#### 📚 Modified Version")
                 st.markdown(f'<p style="color: #e53935; font-size: 0.85rem;">For struggling learners / ELL students</p>', unsafe_allow_html=True)
-                with open(modified_path, "r", encoding="utf-8") as f:
+                with open(modified_path, "rb") as f:
                     content = f.read()
                 st.download_button(
                     label="⬇️ Download Modified Worksheet",
                     data=content,
-                    file_name=f"lesson_{st.session_state.session_id}_worksheet_modified.txt",
-                    mime="text/plain",
+                    file_name=f"lesson_{st.session_state.session_id}_worksheet_modified.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     use_container_width=True
                 )
                 st.caption("Same objectives with added scaffolds: word banks, sentence starters, visual supports")
-
-                with st.expander("Preview modified worksheet"):
-                    st.text(content[:2000] + ("..." if len(content) > 2000 else ""))
 
         with diff_col2:
             if extension_path and Path(extension_path).exists():
                 st.markdown(f"#### 🚀 Extension Version")
                 st.markdown(f'<p style="color: #2196f3; font-size: 0.85rem;">For advanced / gifted learners</p>', unsafe_allow_html=True)
-                with open(extension_path, "r", encoding="utf-8") as f:
+                with open(extension_path, "rb") as f:
                     content = f.read()
                 st.download_button(
                     label="⬇️ Download Extension Worksheet",
                     data=content,
-                    file_name=f"lesson_{st.session_state.session_id}_worksheet_extension.txt",
-                    mime="text/plain",
+                    file_name=f"lesson_{st.session_state.session_id}_worksheet_extension.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
                     use_container_width=True
                 )
                 st.caption("Same objectives with added depth: complex questions, research prompts, creative challenges")
-
-                with st.expander("Preview extension worksheet"):
-                    st.text(content[:2000] + ("..." if len(content) > 2000 else ""))
 
     st.divider()
 
     # Show lesson details in readable format
     with st.expander("📋 View Full Lesson Plan"):
-        st.markdown(format_lesson_display(lesson), unsafe_allow_html=True)
+        st.markdown(format_lesson_display(lesson_or_sequence), unsafe_allow_html=True)
 
     # Persona feedback summary
     if "persona_feedback" in st.session_state.lesson_data:
