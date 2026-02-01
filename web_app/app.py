@@ -20,7 +20,7 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 # Import lesson designer scripts
 from parse_competency import generate_session_id, get_sessions_dir
 from validate_marzano import validate_lesson
-from generate_worksheet import generate_worksheet
+from generate_worksheet import generate_worksheet, generate_worksheet_from_lesson
 from generate_slides import generate_slides
 
 # Import docx for text-to-word conversion
@@ -1615,13 +1615,16 @@ def _store_persona_concerns_for_materials(feedback_list: list):
     st.session_state.lesson_data["marcus_concerns"] = marcus_concerns
 
 
-def generate_modified_worksheet(lesson: dict, concerns: list) -> bytes:
-    """Generate a modified worksheet for struggling learners based on Alex's concerns."""
+def generate_modified_worksheet(lesson: dict, concerns: list) -> dict:
+    """Generate a modified worksheet for struggling learners based on Alex's concerns.
+
+    Returns a lesson-like dict that can be passed to generate_worksheet_from_lesson.
+    """
     client = get_claude_client()
 
     concerns_text = "\n".join([f"- {c.get('element', 'Issue')}: {c.get('issue', '')} (Recommendation: {c.get('recommendation', '')})" for c in concerns])
 
-    prompt = f"""Create a MODIFIED version of this lesson's student worksheet designed for struggling learners and ELL students.
+    prompt = f"""Create a MODIFIED version of this lesson designed for struggling learners and ELL students.
 
 ORIGINAL LESSON:
 Title: {lesson.get('title', 'Lesson')}
@@ -1633,31 +1636,41 @@ Activities:
 
 Vocabulary:
 {json.dumps(lesson.get('vocabulary', []), indent=2)}
+
+Assessment:
+{json.dumps(lesson.get('assessment', {}), indent=2)}
 
 CONCERNS TO ADDRESS (from struggling learner persona):
 {concerns_text}
 
-Create a modified worksheet that:
+Create a modified lesson structure that:
 1. KEEPS THE SAME LEARNING OBJECTIVES
 2. Addresses each concern listed above
-3. Includes these scaffolds as appropriate:
-   - Simplified vocabulary with definitions provided inline
-   - Sentence starters/frames for written responses
-   - Word banks for key terms
-   - Visual supports (describe where images/diagrams should go)
-   - Chunked instructions (one step at a time)
-   - Reduced text density (fewer questions per page, more white space)
-   - Pre-taught vocabulary section at the top
-   - Check-for-understanding boxes after each section
+3. Includes scaffolds: simplified vocabulary, sentence starters, word banks, chunked instructions, visual cues
 
-Format the worksheet as clean, printable content with clear sections.
-Use simple formatting: headers with === underneath, bullet points with -, numbered lists.
-Include [VISUAL: description] placeholders where images would help.
+Return ONLY valid JSON in this exact format:
+{{
+    "title": "Modified: [original title]",
+    "grade_level": "{lesson.get('grade_level', '')}",
+    "objective": "[same objective, possibly simplified wording]",
+    "activities": [
+        {{
+            "name": "[activity name - e.g., 'Vocabulary Preview' or 'Guided Practice']",
+            "marzano_level": "retrieval|comprehension|analysis|knowledge_utilization",
+            "instructions": ["Step 1...", "Step 2..."],
+            "student_output": "[what students will produce]",
+            "discussion_questions": ["Question with sentence starter: I think ___ because ___"]
+        }}
+    ],
+    "vocabulary": [
+        {{"word": "term", "definition": "simple definition with example"}}
+    ],
+    "assessment": {{
+        "questions": ["Exit ticket question 1 (with scaffold if needed)", "Exit ticket question 2"]
+    }}
+}}
 
-Start with a header:
-MODIFIED WORKSHEET - Additional Support Version
-{lesson.get('title', 'Lesson')}
-"""
+Include 2-4 activities with scaffolded instructions. Simplify vocabulary definitions. Add sentence starters to discussion questions."""
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -1665,16 +1678,27 @@ MODIFIED WORKSHEET - Additional Support Version
         messages=[{"role": "user", "content": prompt}]
     )
 
-    return response.content[0].text
+    # Parse JSON from response
+    response_text = response.content[0].text
+    # Extract JSON if wrapped in markdown code blocks
+    if "```json" in response_text:
+        response_text = response_text.split("```json")[1].split("```")[0]
+    elif "```" in response_text:
+        response_text = response_text.split("```")[1].split("```")[0]
+
+    return json.loads(response_text.strip())
 
 
-def generate_extension_worksheet(lesson: dict, concerns: list) -> bytes:
-    """Generate an extension worksheet for advanced learners based on Marcus's concerns."""
+def generate_extension_worksheet(lesson: dict, concerns: list) -> dict:
+    """Generate an extension worksheet for advanced learners based on Marcus's concerns.
+
+    Returns a lesson-like dict that can be passed to generate_worksheet_from_lesson.
+    """
     client = get_claude_client()
 
     concerns_text = "\n".join([f"- {c.get('element', 'Issue')}: {c.get('issue', '')} (Recommendation: {c.get('recommendation', '')})" for c in concerns])
 
-    prompt = f"""Create an EXTENSION version of this lesson's student worksheet designed for advanced/gifted learners.
+    prompt = f"""Create an EXTENSION version of this lesson designed for advanced/gifted learners.
 
 ORIGINAL LESSON:
 Title: {lesson.get('title', 'Lesson')}
@@ -1687,31 +1711,40 @@ Activities:
 Vocabulary:
 {json.dumps(lesson.get('vocabulary', []), indent=2)}
 
+Assessment:
+{json.dumps(lesson.get('assessment', {}), indent=2)}
+
 CONCERNS TO ADDRESS (from high-achieving student persona):
 {concerns_text}
 
-Create an extension worksheet that:
+Create an extension lesson structure that:
 1. KEEPS THE SAME CORE LEARNING OBJECTIVES but adds depth
 2. Addresses each concern listed above (typically about ceiling/challenge)
-3. Includes these extensions as appropriate:
-   - Deeper, more complex questions that require synthesis
-   - Open-ended investigation prompts
-   - Connections to advanced concepts or cross-curricular links
-   - Independent research opportunities
-   - Creative application challenges
-   - "What if?" scenarios that extend thinking
-   - Opportunities to teach/explain to others
-   - Self-directed learning paths
+3. Includes: deeper analysis questions, research prompts, creative challenges, cross-curricular connections
 
-Format the worksheet as clean, printable content with clear sections.
-Use simple formatting: headers with === underneath, bullet points with -, numbered lists.
+Return ONLY valid JSON in this exact format:
+{{
+    "title": "Extension: [original title]",
+    "grade_level": "{lesson.get('grade_level', '')}",
+    "objective": "[enhanced objective with deeper mastery expectations]",
+    "activities": [
+        {{
+            "name": "[activity name - e.g., 'Deep Dive Analysis' or 'Independent Investigation']",
+            "marzano_level": "analysis|knowledge_utilization",
+            "instructions": ["Challenge step 1...", "Challenge step 2..."],
+            "student_output": "[what students will produce - more complex output]",
+            "discussion_questions": ["Higher-order thinking question requiring synthesis"]
+        }}
+    ],
+    "vocabulary": [
+        {{"word": "advanced term", "definition": "definition with nuance and connections"}}
+    ],
+    "assessment": {{
+        "questions": ["Complex exit ticket question 1", "Open-ended reflection question"]
+    }}
+}}
 
-Start with a header:
-EXTENSION WORKSHEET - Advanced Challenge Version
-{lesson.get('title', 'Lesson')}
-
-Note: Students should complete the core worksheet first, then work on these extensions.
-"""
+Include 2-4 challenging activities at analysis or knowledge_utilization level. Add advanced vocabulary. Questions should require synthesis and evaluation."""
 
     response = client.messages.create(
         model="claude-sonnet-4-20250514",
@@ -1719,7 +1752,15 @@ Note: Students should complete the core worksheet first, then work on these exte
         messages=[{"role": "user", "content": prompt}]
     )
 
-    return response.content[0].text
+    # Parse JSON from response
+    response_text = response.content[0].text
+    # Extract JSON if wrapped in markdown code blocks
+    if "```json" in response_text:
+        response_text = response_text.split("```json")[1].split("```")[0]
+    elif "```" in response_text:
+        response_text = response_text.split("```")[1].split("```")[0]
+
+    return json.loads(response_text.strip())
 
 
 def text_to_word_document(text: str, output_path: str, title: str = "Worksheet") -> None:
@@ -2489,10 +2530,9 @@ elif st.session_state.stage == 5:
         if alex_concerns:
             with st.spinner("📝 Generating modified materials for struggling learners..."):
                 try:
-                    modified_content = generate_modified_worksheet(lesson_or_sequence, alex_concerns)
+                    modified_lesson = generate_modified_worksheet(lesson_or_sequence, alex_concerns)
                     modified_path = temp_dir / "worksheet_modified.docx"
-                    lesson_title = lesson_or_sequence.get('title', lesson_or_sequence.get('sequence_title', 'Lesson'))
-                    text_to_word_document(modified_content, str(modified_path), f"Modified - {lesson_title}")
+                    generate_worksheet_from_lesson(modified_lesson, str(modified_path))
                     st.session_state.lesson_data["modified_worksheet_path"] = str(modified_path)
                 except Exception as e:
                     st.error(f"Error generating modified worksheet: {e}")
@@ -2503,10 +2543,9 @@ elif st.session_state.stage == 5:
         if marcus_concerns:
             with st.spinner("🚀 Generating extension materials for advanced learners..."):
                 try:
-                    extension_content = generate_extension_worksheet(lesson_or_sequence, marcus_concerns)
+                    extension_lesson = generate_extension_worksheet(lesson_or_sequence, marcus_concerns)
                     extension_path = temp_dir / "worksheet_extension.docx"
-                    lesson_title = lesson_or_sequence.get('title', lesson_or_sequence.get('sequence_title', 'Lesson'))
-                    text_to_word_document(extension_content, str(extension_path), f"Extension - {lesson_title}")
+                    generate_worksheet_from_lesson(extension_lesson, str(extension_path))
                     st.session_state.lesson_data["extension_worksheet_path"] = str(extension_path)
                 except Exception as e:
                     st.error(f"Error generating extension worksheet: {e}")
