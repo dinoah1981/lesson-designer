@@ -603,7 +603,7 @@ def load_marzano_framework():
     return ""
 
 
-def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledge: list = None, skills: list = None, redesign_concerns: list = None, user_feedback: str = None) -> dict:
+def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledge: list = None, skills: list = None, redesign_concerns: list = None, user_feedback: str = None, approved_flow: dict = None) -> dict:
     """Use Claude to design a lesson or lesson sequence based on input."""
     client = get_claude_client()
 
@@ -619,6 +619,17 @@ def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledg
     if skills:
         skills_items = [s["item"] for s in skills]
         skills_text = f"\n\nCONFIRMED SKILLS (students must be able to do these):\n" + "\n".join(f"- {s}" for s in skills_items)
+
+    # Format approved lesson flow if provided
+    flow_text = ""
+    if approved_flow and approved_flow.get("lessons"):
+        flow_text = "\n\nAPPROVED LESSON FLOW (follow this structure):\n"
+        flow_text += f"Sequence: {approved_flow.get('sequence_title', 'Lesson Sequence')}\n"
+        for lesson in approved_flow.get("lessons", []):
+            flow_text += f"\n- Lesson {lesson.get('lesson_number', '?')}: {lesson.get('title', 'Untitled')}\n"
+            flow_text += f"  Type: {lesson.get('lesson_type', 'introducing')}\n"
+            flow_text += f"  Objective: {lesson.get('objective', 'TBD')}\n"
+            flow_text += f"  Focus: {lesson.get('focus', '')}\n"
 
     # Format redesign concerns and user feedback if this is a redesign
     redesign_text = ""
@@ -712,14 +723,19 @@ IMPORTANT: Use the "instructional_phase" field with SUBJECT-APPROPRIATE phases:
 
     if lesson_count == 1:
         # Single lesson design
+        # Determine lesson type from approved flow or default
+        lesson_type_str = "introducing"
+        if approved_flow and approved_flow.get("lessons"):
+            lesson_type_str = approved_flow["lessons"][0].get("lesson_type", "introducing")
+
         prompt = f"""You are an expert instructional designer using Marzano's New Taxonomy and SUBJECT-SPECIFIC pedagogical approaches.
 
 Design a complete lesson based on this input:
 - Competency: {input_data['competency']}
 - Grade Level: {input_data['grade_level']}
 - Duration: {input_data['duration']} minutes
-- Lesson Type: {input_data['lesson_type']}
-- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}{redesign_text}
+- Lesson Type: {lesson_type_str}
+- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}{flow_text}{redesign_text}
 
 {subject_pedagogy}
 
@@ -770,7 +786,7 @@ Return a JSON object with this exact structure:
     "title": "Lesson title",
     "grade_level": "{input_data['grade_level']}",
     "duration": {input_data['duration']},
-    "lesson_type": "{input_data['lesson_type']}",
+    "lesson_type": "{lesson_type_str}",
     "objective": "Students will be able to...",
     "essential_question": "Overarching inquiry question that drives the lesson",
     "vocabulary": [
@@ -861,7 +877,7 @@ Design a {lesson_count}-LESSON SEQUENCE based on this input:
 - Grade Level: {input_data['grade_level']}
 - Duration per lesson: {input_data['duration']} minutes
 - Total lessons: {lesson_count}
-- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}{redesign_text}
+- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}{flow_text}{redesign_text}
 
 {subject_pedagogy}
 
@@ -1091,6 +1107,77 @@ Return ONLY the JSON object."""
     return json.loads(response_text.strip())
 
 
+def propose_lesson_flow(competency: str, lesson_count: int, grade_level: str, lesson_objectives: list = None, knowledge: list = None, skills: list = None) -> dict:
+    """Propose a lesson flow with types for each lesson in the sequence."""
+    client = get_claude_client()
+
+    # Format user-provided objectives if any
+    objectives_text = ""
+    if lesson_objectives and any(lesson_objectives):
+        objectives_text = "\n\nUSER-SPECIFIED OBJECTIVES (incorporate these):\n"
+        for i, obj in enumerate(lesson_objectives):
+            if obj:
+                objectives_text += f"- Lesson {i+1}: {obj}\n"
+
+    # Format extracted knowledge/skills
+    ks_text = ""
+    if knowledge:
+        ks_text += "\n\nKNOWLEDGE TO BUILD:\n" + "\n".join(f"- {k['item']}" for k in knowledge)
+    if skills:
+        ks_text += "\n\nSKILLS TO DEVELOP:\n" + "\n".join(f"- {s['item']}" for s in skills)
+
+    prompt = f"""Design a {lesson_count}-lesson sequence to teach this competency:
+
+COMPETENCY: {competency}
+GRADE LEVEL: {grade_level}
+NUMBER OF LESSONS: {lesson_count}{objectives_text}{ks_text}
+
+Design an effective learning progression. Consider:
+- Lesson types should build logically (typically: Introducing → Deepening → Synthesis)
+- Each lesson needs a distinct, achievable objective
+- Knowledge/vocabulary should be introduced before skills that use them
+- Later lessons should build on and reference earlier ones
+
+LESSON TYPES (choose appropriately for each):
+- **Introducing**: First exposure to new concepts/vocabulary - more teacher support, scaffolded exploration
+- **Deepening**: Building fluency through guided then independent practice - applying concepts
+- **Synthesis**: Connecting ideas, analyzing patterns, higher-order thinking
+- **Review**: Consolidating and assessing - retrieval practice, performance tasks
+
+Return a JSON object:
+{{
+    "sequence_title": "Brief, engaging title for the lesson sequence",
+    "sequence_rationale": "1-2 sentences explaining the learning progression",
+    "lessons": [
+        {{
+            "lesson_number": 1,
+            "lesson_type": "introducing|deepening|synthesis|review",
+            "title": "Lesson title",
+            "objective": "Students will be able to...",
+            "focus": "Brief description of what this lesson covers",
+            "builds_on": null,
+            "prepares_for": "What this lesson sets up for the next one"
+        }}
+    ]
+}}
+
+Return ONLY the JSON object."""
+
+    response = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}]
+    )
+
+    response_text = response.content[0].text
+    if "```json" in response_text:
+        response_text = response_text.split("```json")[1].split("```")[0]
+    elif "```" in response_text:
+        response_text = response_text.split("```")[1].split("```")[0]
+
+    return json.loads(response_text.strip())
+
+
 def get_persona_feedback(lesson_or_sequence: dict, persona_key: str, persona: dict) -> dict:
     """Get feedback from a student persona on a lesson or lesson sequence."""
     client = get_claude_client()
@@ -1124,31 +1211,30 @@ Overview: {lesson_or_sequence.get('sequence_overview', 'Not specified')}
 Total Duration: {len(lessons)} lessons x {lesson_or_sequence.get('duration_per_lesson', 50)} minutes
 {lessons_text}
 
-Evaluate this ENTIRE SEQUENCE from {persona['name']}'s perspective. Consider:
-1. Does the sequence build appropriately across lessons?
-2. Is vocabulary introduced at the right pace?
-3. Does cognitive complexity increase appropriately?
-4. Will this student stay engaged across all {len(lessons)} lessons?
-5. Are there adequate scaffolds/challenges throughout?
+Evaluate this ENTIRE SEQUENCE from {persona['name']}'s perspective.
+
+IMPORTANT: Be CONCISE. Only flag issues that would significantly impact this student's learning.
 
 Return a JSON object:
 {{
     "persona_key": "{persona_key}",
     "persona_name": "{persona['name']}",
     "overall_rating": 1-5,
-    "reaction": "A 2-3 sentence description of how {persona['name']} would likely respond to this sequence over {len(lessons)} days",
+    "reaction": "One sentence: how {persona['name']} would feel about this sequence",
     "concerns": [
         {{
             "id": "unique_id",
             "lesson": "all|1|2|3|4",
-            "element": "vocabulary|instructions|scaffolding|pacing|engagement|challenge|progression",
-            "issue": "Specific issue description",
-            "severity": "high|medium|low",
-            "recommendation": "Specific suggested fix"
+            "element": "scaffolding|pacing|engagement|challenge|progression",
+            "issue": "Concise issue (max 15 words)",
+            "severity": "high|medium",
+            "recommendation": "Quick fix suggestion (max 15 words)"
         }}
     ],
-    "strengths": ["What works well for this student across the sequence"]
+    "strengths": ["One key strength for this student"]
 }}
+
+LIMIT: Maximum 2-3 concerns total. Only include HIGH or MEDIUM severity issues.
 
 Return ONLY the JSON object."""
     else:
@@ -1172,30 +1258,29 @@ Activities:
 Vocabulary:
 {json.dumps(lesson_or_sequence.get('vocabulary', []), indent=2)}
 
-Evaluate this lesson from {persona['name']}'s perspective. Consider:
-1. Would this student understand the vocabulary?
-2. Are the instructions clear enough?
-3. Is there adequate scaffolding?
-4. Is the pacing appropriate?
-5. Would this student be engaged?
+Evaluate this lesson from {persona['name']}'s perspective.
+
+IMPORTANT: Be CONCISE. Only flag issues that would significantly impact this student's learning.
 
 Return a JSON object:
 {{
     "persona_key": "{persona_key}",
     "persona_name": "{persona['name']}",
     "overall_rating": 1-5,
-    "reaction": "A 2-3 sentence description of how {persona['name']} would likely respond to this lesson",
+    "reaction": "One sentence: how {persona['name']} would feel about this lesson",
     "concerns": [
         {{
             "id": "unique_id",
-            "element": "vocabulary|instructions|scaffolding|pacing|engagement|challenge",
-            "issue": "Specific issue description",
-            "severity": "high|medium|low",
-            "recommendation": "Specific suggested fix"
+            "element": "scaffolding|pacing|engagement|challenge",
+            "issue": "Concise issue (max 15 words)",
+            "severity": "high|medium",
+            "recommendation": "Quick fix suggestion (max 15 words)"
         }}
     ],
-    "strengths": ["What works well for this student"]
+    "strengths": ["One key strength for this student"]
 }}
+
+LIMIT: Maximum 2-3 concerns total. Only include HIGH or MEDIUM severity issues.
 
 Return ONLY the JSON object."""
 
@@ -1573,6 +1658,56 @@ def format_lesson_display(lesson_or_sequence: dict) -> str:
     else:
         # Single lesson - use the same detailed format
         parts.append(format_single_lesson_html(lesson_or_sequence))
+
+    return ''.join(parts)
+
+
+def format_compact_agenda(lesson: dict, lesson_num: int = None) -> str:
+    """Format a compact agenda view for a single lesson (collapsed view)."""
+    parts = []
+
+    title = escape_html(lesson.get('title', 'Untitled'))
+    objective = escape_html(lesson.get('objective', 'Not specified'))
+    lesson_type = escape_html(lesson.get('lesson_type', '').replace('_', ' ').title())
+    duration = lesson.get('duration', lesson.get('duration_per_lesson', 50))
+
+    # Header with lesson number and title
+    header = f"Lesson {lesson_num}: {title}" if lesson_num else title
+
+    parts.append(f'''<div style="background: #f8faf8; border-left: 4px solid {LIGHT_GREEN}; padding: 0.75rem 1rem; margin: 0.5rem 0; border-radius: 0 8px 8px 0;">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<strong style="color: {DARK_GREEN};">{escape_html(header)}</strong>
+<span style="color: #888; font-size: 0.85rem;">{lesson_type} • {duration} min</span>
+</div>
+<p style="color: #555; font-size: 0.9rem; margin: 0.5rem 0 0.75rem 0;">{objective}</p>
+<div style="font-size: 0.85rem;">''')
+
+    # Compact activity list with timing
+    activities = lesson.get('activities', [])
+    for i, act in enumerate(activities, 1):
+        name = escape_html(act.get('name', 'Activity'))
+        dur = act.get('duration', 0)
+        parts.append(f'<span style="color: #666;">{i}. {name} ({dur}m)</span>')
+        if i < len(activities):
+            parts.append(' → ')
+
+    parts.append('</div></div>')
+
+    return ''.join(parts)
+
+
+def format_sequence_overview_compact(lesson_or_sequence: dict) -> str:
+    """Format a compact sequence overview showing all lessons."""
+    parts = []
+
+    title = escape_html(lesson_or_sequence.get('sequence_title', 'Lesson Sequence'))
+    total_lessons = lesson_or_sequence.get('total_lessons', len(lesson_or_sequence.get('lessons', [])))
+    duration = lesson_or_sequence.get('duration_per_lesson', 50)
+
+    parts.append(f'''<div style="background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%); padding: 1rem; border-radius: 12px; margin-bottom: 1rem;">
+<h4 style="color: {DARK_GREEN}; margin: 0 0 0.5rem 0;">📚 {title}</h4>
+<p style="color: #555; margin: 0; font-size: 0.9rem;">{total_lessons} lessons × {duration} minutes</p>
+</div>''')
 
     return ''.join(parts)
 
@@ -1958,144 +2093,129 @@ st.markdown('<p class="sub-header">Marzano-aligned lesson planning for every lea
 render_progress_stepper(st.session_state.stage)
 
 
-# Stage 1: Input Requirements
+# Stage 1: Input Requirements - Simplified
 if st.session_state.stage == 1:
-    st.markdown('<div class="stage-header"><span class="stage-header-icon">📝</span> Define Your Lessons</div>', unsafe_allow_html=True)
+    st.markdown('<div class="stage-header"><span class="stage-header-icon">📝</span> Define Your Lesson</div>', unsafe_allow_html=True)
 
-    # Initialize temp competencies list in session state if not exists
-    if "temp_competencies" not in st.session_state:
-        st.session_state.temp_competencies = []
+    # Initialize session state for lesson objectives
+    if "lesson_objectives" not in st.session_state:
+        st.session_state.lesson_objectives = {}
 
-    # Shared settings
-    st.markdown("### General Settings")
-    col1, col2 = st.columns(2)
+    # Main competency input
+    st.markdown("### What do you want students to learn?")
+
+    competency = st.text_area(
+        "Competency",
+        placeholder="e.g., Students will analyze primary sources to evaluate historical claims about the causes of World War I",
+        help="State what students will be able to DO by the end of the lesson(s)",
+        height=100,
+        key="competency_input"
+    )
+
+    # Settings row
+    col1, col2, col3 = st.columns(3)
     with col1:
+        lesson_count = st.selectbox(
+            "Number of Lessons",
+            [1, 2, 3, 4, 5],
+            format_func=lambda x: f"{x} lesson{'s' if x > 1 else ''}",
+            key="lesson_count_input",
+            help="How many class periods to spend on this competency"
+        )
+    with col2:
         grade_level = st.selectbox(
             "Grade Level",
             ["6th grade", "7th grade", "8th grade", "9th grade",
              "10th grade", "11th grade", "12th grade", "AP", "College"],
             key="grade_level_input"
         )
-    with col2:
-        duration = st.slider("Lesson Duration (minutes)", 30, 90, 50, 5, key="duration_input")
+    with col3:
+        duration = st.slider("Minutes per Lesson", 30, 90, 50, 5, key="duration_input")
 
+    # Optional: Specific objectives per lesson
+    if lesson_count > 1:
+        st.divider()
+        with st.expander("📋 Add specific objectives for each lesson (optional)", expanded=False):
+            st.markdown(f'<p style="color: #666; font-size: 0.9rem;">Leave blank to let Claude design the lesson flow automatically. Or specify what you want each lesson to focus on.</p>', unsafe_allow_html=True)
+
+            for i in range(lesson_count):
+                obj_key = f"lesson_obj_{i}"
+                # Initialize if not exists
+                if obj_key not in st.session_state.lesson_objectives:
+                    st.session_state.lesson_objectives[obj_key] = ""
+
+                st.session_state.lesson_objectives[obj_key] = st.text_input(
+                    f"Lesson {i+1} objective",
+                    value=st.session_state.lesson_objectives.get(obj_key, ""),
+                    placeholder=f"e.g., {'Introduce key vocabulary and concepts' if i == 0 else 'Apply concepts to new scenarios' if i == lesson_count-1 else 'Practice with guided examples'}",
+                    key=f"obj_input_{i}"
+                )
+
+    # Constraints
     constraints = st.text_area(
-        "Any constraints? (optional)",
-        placeholder="e.g., Limited technology, students already know X...",
+        "Any constraints or context? (optional)",
+        placeholder="e.g., Limited technology, students already covered X, want to include Y activity...",
         height=68,
         key="constraints_input"
     )
 
     st.divider()
 
-    # Competency input section
-    st.markdown("### Add Competencies")
-    st.markdown('<p style="color: #666; font-size: 0.9rem;">Add one or more competencies. Each can span 1-4 lessons.</p>', unsafe_allow_html=True)
+    # Start button
+    if st.button("🚀 Continue", type="primary", use_container_width=True, disabled=not competency.strip()):
+        if competency.strip():
+            # Gather lesson objectives
+            lesson_objectives = []
+            for i in range(lesson_count):
+                obj = st.session_state.lesson_objectives.get(f"lesson_obj_{i}", "").strip()
+                lesson_objectives.append(obj if obj else None)
 
-    with st.form("add_competency_form"):
-        competency = st.text_area(
-            "Competency",
-            placeholder="e.g., Students will analyze primary sources to evaluate historical claims",
-            help="State what students will DO, not just what they'll learn about",
-            height=80
-        )
-
-        comp_col1, comp_col2 = st.columns(2)
-        with comp_col1:
-            lesson_count = st.selectbox(
-                "Number of lessons for this competency",
-                [1, 2, 3, 4],
-                format_func=lambda x: f"{x} lesson{'s' if x > 1 else ''}"
-            )
-        with comp_col2:
-            lesson_type = st.selectbox(
-                "Primary lesson type",
-                ["introducing", "practicing", "applying", "synthesizing", "novel_application"],
-                format_func=lambda x: {
-                    "introducing": "Introducing New Content",
-                    "practicing": "Practicing Skills",
-                    "applying": "Applying Knowledge",
-                    "synthesizing": "Synthesizing Ideas",
-                    "novel_application": "Novel Application"
-                }.get(x, x)
-            )
-
-        add_competency = st.form_submit_button("➕ Add Competency", use_container_width=True)
-
-        if add_competency and competency.strip():
-            st.session_state.temp_competencies.append({
+            # Build input data
+            input_data = {
                 "competency": competency.strip(),
                 "lesson_count": lesson_count,
-                "lesson_type": lesson_type,
                 "grade_level": grade_level,
                 "duration": duration,
-                "constraints": constraints
-            })
+                "constraints": constraints,
+                "lesson_objectives": lesson_objectives  # User-specified objectives per lesson (may be None)
+            }
+
+            # Store input data
+            st.session_state.lesson_data["input"] = input_data
+
+            # Initialize competency queue (for compatibility with download stage)
+            st.session_state.competency_queue = [input_data]
+            st.session_state.current_competency_index = 0
+
+            st.session_state.session_id = str(uuid.uuid4())[:8]
+            st.session_state.stage = 2
             st.rerun()
 
-    # Display queued competencies
-    if st.session_state.temp_competencies:
-        st.divider()
-        st.markdown("### Queued Competencies")
-
-        total_lessons = sum(c["lesson_count"] for c in st.session_state.temp_competencies)
-        st.markdown(f'<p style="color: {DARK_GREEN}; font-weight: 600;">Total: {len(st.session_state.temp_competencies)} competenc{"ies" if len(st.session_state.temp_competencies) > 1 else "y"} → {total_lessons} lesson{"s" if total_lessons > 1 else ""}</p>', unsafe_allow_html=True)
-
-        for i, comp in enumerate(st.session_state.temp_competencies):
-            col1, col2 = st.columns([0.9, 0.1])
-            with col1:
-                lesson_word = "lesson" if comp["lesson_count"] == 1 else "lessons"
-                st.markdown(f"""
-                <div style="background: #f8faf8; border-left: 3px solid {LIGHT_GREEN}; padding: 0.75rem 1rem; margin: 0.5rem 0; border-radius: 0 8px 8px 0;">
-                    <strong style="color: {DARK_GREEN};">Competency {i+1}</strong> ({comp["lesson_count"]} {lesson_word})<br>
-                    <span style="color: #555;">{comp["competency"][:100]}{"..." if len(comp["competency"]) > 100 else ""}</span>
-                </div>
-                """, unsafe_allow_html=True)
-            with col2:
-                if st.button("🗑️", key=f"remove_comp_{i}"):
-                    st.session_state.temp_competencies.pop(i)
-                    st.rerun()
-
-        st.divider()
-
-        # Start button
-        if st.button("🚀 Start Designing Lessons", type="primary", use_container_width=True):
-            if st.session_state.temp_competencies:
-                # Transfer to competency queue
-                st.session_state.competency_queue = st.session_state.temp_competencies.copy()
-                st.session_state.current_competency_index = 0
-                st.session_state.temp_competencies = []
-
-                # Load first competency
-                first_comp = st.session_state.competency_queue[0]
-                st.session_state.lesson_data["input"] = first_comp
-                st.session_state.session_id = str(uuid.uuid4())[:8]
-                st.session_state.stage = 2
-                st.rerun()
-    else:
-        st.info("👆 Add at least one competency to get started.")
+    if not competency.strip():
+        st.info("👆 Enter a competency to get started.")
 
 
-# Stage 2: Review Knowledge & Skills
+# Stage 2: Review Lesson Plan
 elif st.session_state.stage == 2:
-    st.markdown('<div class="stage-header"><span class="stage-header-icon">🔍</span> Review Knowledge & Skills</div>', unsafe_allow_html=True)
+    st.markdown('<div class="stage-header"><span class="stage-header-icon">🔍</span> Review Lesson Plan</div>', unsafe_allow_html=True)
 
     input_data = st.session_state.lesson_data["input"]
+    lesson_count = input_data.get("lesson_count", 1)
 
     st.markdown(f"""
     <div class="info-box">
         <strong>Competency:</strong> {input_data['competency']}<br>
-        <strong>Grade:</strong> {input_data['grade_level']}
+        <strong>Grade:</strong> {input_data['grade_level']} |
+        <strong>Lessons:</strong> {lesson_count} × {input_data['duration']} minutes
     </div>
     """, unsafe_allow_html=True)
 
-    # Extract knowledge and skills if not already done
+    # Phase 1: Extract knowledge and skills
     if "knowledge_skills" not in st.session_state.lesson_data:
-        with st.spinner("🔍 Analyzing competency to extract underlying knowledge and skills..."):
+        with st.spinner("🔍 Analyzing competency..."):
             try:
                 ks_data = extract_knowledge_skills(input_data["competency"], input_data["grade_level"])
                 st.session_state.lesson_data["knowledge_skills"] = ks_data
-                # Initialize selections
                 st.session_state.lesson_data["selected_knowledge"] = {
                     k["id"]: True for k in ks_data.get("knowledge", [])
                 }
@@ -2104,102 +2224,131 @@ elif st.session_state.stage == 2:
                 }
                 st.rerun()
             except Exception as e:
-                st.error(f"Error extracting knowledge/skills: {str(e)}")
+                st.error(f"Error analyzing competency: {str(e)}")
                 if st.button("Try Again"):
                     st.rerun()
-    else:
+
+    # Phase 2: Propose lesson flow (after knowledge/skills extracted)
+    elif "lesson_flow" not in st.session_state.lesson_data:
         ks_data = st.session_state.lesson_data["knowledge_skills"]
 
-        st.markdown("""
-        <p style="color: #666; margin-bottom: 1rem;">
-        Review the knowledge and skills below. Uncheck any that aren't relevant,
-        and add your own if something is missing.
-        </p>
-        """, unsafe_allow_html=True)
+        # Get confirmed knowledge/skills for the flow proposal
+        confirmed_knowledge = [
+            item for item in ks_data["knowledge"]
+            if st.session_state.lesson_data["selected_knowledge"].get(item["id"], True)
+        ]
+        confirmed_skills = [
+            item for item in ks_data["skills"]
+            if st.session_state.lesson_data["selected_skills"].get(item["id"], True)
+        ]
 
-        col1, col2 = st.columns(2)
-
-        # Knowledge column
-        with col1:
-            st.markdown(f'<h4 style="color: {DARK_GREEN};">📚 Knowledge (What students must KNOW)</h4>', unsafe_allow_html=True)
-
-            for item in ks_data.get("knowledge", []):
-                item_id = item["id"]
-                is_selected = st.checkbox(
-                    item["item"],
-                    value=st.session_state.lesson_data["selected_knowledge"].get(item_id, True),
-                    key=f"know_{item_id}",
-                    help=f"Category: {item.get('category', 'concept').title()}"
+        with st.spinner("📋 Designing lesson flow..."):
+            try:
+                flow = propose_lesson_flow(
+                    input_data["competency"],
+                    lesson_count,
+                    input_data["grade_level"],
+                    input_data.get("lesson_objectives", []),
+                    confirmed_knowledge,
+                    confirmed_skills
                 )
-                st.session_state.lesson_data["selected_knowledge"][item_id] = is_selected
-
-            # Add custom knowledge
-            st.markdown("---")
-            new_knowledge = st.text_input(
-                "Add custom knowledge item:",
-                key="new_knowledge_input",
-                placeholder="e.g., Understanding of binary numbers"
-            )
-            if st.button("➕ Add Knowledge", key="add_knowledge_btn"):
-                if new_knowledge.strip():
-                    new_id = f"k_custom_{len(ks_data['knowledge']) + 1}"
-                    ks_data["knowledge"].append({
-                        "id": new_id,
-                        "item": new_knowledge.strip(),
-                        "category": "custom"
-                    })
-                    st.session_state.lesson_data["selected_knowledge"][new_id] = True
+                st.session_state.lesson_data["lesson_flow"] = flow
+                # Initialize editable lesson types
+                st.session_state.lesson_data["lesson_types"] = {
+                    i: lesson["lesson_type"] for i, lesson in enumerate(flow.get("lessons", []))
+                }
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error proposing lesson flow: {str(e)}")
+                if st.button("Try Again"):
                     st.rerun()
 
-        # Skills column
-        with col2:
-            st.markdown(f'<h4 style="color: {DARK_GREEN};">🛠️ Skills (What students must DO)</h4>', unsafe_allow_html=True)
+    else:
+        # Display everything for review
+        ks_data = st.session_state.lesson_data["knowledge_skills"]
+        flow_data = st.session_state.lesson_data["lesson_flow"]
 
-            for item in ks_data.get("skills", []):
-                item_id = item["id"]
-                is_selected = st.checkbox(
-                    item["item"],
-                    value=st.session_state.lesson_data["selected_skills"].get(item_id, True),
-                    key=f"skill_{item_id}",
-                    help=f"Category: {item.get('category', 'cognitive').title()}"
-                )
-                st.session_state.lesson_data["selected_skills"][item_id] = is_selected
+        # LESSON FLOW SECTION (Primary focus)
+        st.markdown(f"### 📋 Proposed Lesson Flow")
+        st.markdown(f'<p style="color: #666; font-size: 0.95rem;">{flow_data.get("sequence_rationale", "")}</p>', unsafe_allow_html=True)
 
-            # Add custom skill
-            st.markdown("---")
-            new_skill = st.text_input(
-                "Add custom skill:",
-                key="new_skill_input",
-                placeholder="e.g., Debug simple programs"
-            )
-            if st.button("➕ Add Skill", key="add_skill_btn"):
-                if new_skill.strip():
-                    new_id = f"s_custom_{len(ks_data['skills']) + 1}"
-                    ks_data["skills"].append({
-                        "id": new_id,
-                        "item": new_skill.strip(),
-                        "category": "custom"
-                    })
-                    st.session_state.lesson_data["selected_skills"][new_id] = True
-                    st.rerun()
+        lesson_type_options = ["introducing", "deepening", "synthesis", "review"]
+        lesson_type_labels = {
+            "introducing": "🆕 Introducing",
+            "deepening": "📈 Deepening",
+            "synthesis": "🔗 Synthesis",
+            "review": "📝 Review"
+        }
+
+        for i, lesson in enumerate(flow_data.get("lessons", [])):
+            current_type = st.session_state.lesson_data["lesson_types"].get(i, lesson.get("lesson_type", "introducing"))
+
+            with st.container():
+                col1, col2 = st.columns([3, 1])
+                with col1:
+                    st.markdown(f"""
+                    <div style="background: #f8faf8; border-left: 4px solid {LIGHT_GREEN}; padding: 1rem; margin: 0.5rem 0; border-radius: 0 8px 8px 0;">
+                        <strong style="color: {DARK_GREEN}; font-size: 1.1rem;">Lesson {lesson.get('lesson_number', i+1)}: {lesson.get('title', 'Untitled')}</strong><br>
+                        <span style="color: #555; font-size: 0.9rem;">{lesson.get('objective', '')}</span><br>
+                        <span style="color: #888; font-size: 0.85rem; font-style: italic;">{lesson.get('focus', '')}</span>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col2:
+                    new_type = st.selectbox(
+                        "Type",
+                        lesson_type_options,
+                        index=lesson_type_options.index(current_type) if current_type in lesson_type_options else 0,
+                        format_func=lambda x: lesson_type_labels.get(x, x.title()),
+                        key=f"lesson_type_{i}",
+                        label_visibility="collapsed"
+                    )
+                    st.session_state.lesson_data["lesson_types"][i] = new_type
+
+        # KNOWLEDGE & SKILLS (Collapsible)
+        st.divider()
+        with st.expander("📚 Review Knowledge & Skills (optional)", expanded=False):
+            st.markdown('<p style="color: #666; font-size: 0.9rem;">Uncheck items that aren\'t relevant or add custom items.</p>', unsafe_allow_html=True)
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown(f'<h5 style="color: {DARK_GREEN};">Knowledge</h5>', unsafe_allow_html=True)
+                for item in ks_data.get("knowledge", []):
+                    item_id = item["id"]
+                    is_selected = st.checkbox(
+                        item["item"],
+                        value=st.session_state.lesson_data["selected_knowledge"].get(item_id, True),
+                        key=f"know_{item_id}"
+                    )
+                    st.session_state.lesson_data["selected_knowledge"][item_id] = is_selected
+
+            with col2:
+                st.markdown(f'<h5 style="color: {DARK_GREEN};">Skills</h5>', unsafe_allow_html=True)
+                for item in ks_data.get("skills", []):
+                    item_id = item["id"]
+                    is_selected = st.checkbox(
+                        item["item"],
+                        value=st.session_state.lesson_data["selected_skills"].get(item_id, True),
+                        key=f"skill_{item_id}"
+                    )
+                    st.session_state.lesson_data["selected_skills"][item_id] = is_selected
 
         st.divider()
 
-        # Count selections
-        selected_k = sum(1 for v in st.session_state.lesson_data["selected_knowledge"].values() if v)
-        selected_s = sum(1 for v in st.session_state.lesson_data["selected_skills"].values() if v)
-
-        st.markdown(f"**Selected:** {selected_k} knowledge items, {selected_s} skills")
-
+        # Navigation
         col1, col2 = st.columns([1, 2])
         with col1:
             if st.button("← Back", use_container_width=True):
-                del st.session_state.lesson_data["knowledge_skills"]
+                # Clear flow data to allow re-generation
+                if "lesson_flow" in st.session_state.lesson_data:
+                    del st.session_state.lesson_data["lesson_flow"]
+                if "knowledge_skills" in st.session_state.lesson_data:
+                    del st.session_state.lesson_data["knowledge_skills"]
                 st.session_state.stage = 1
                 st.rerun()
         with col2:
-            if st.button("Continue to Lesson Design →", type="primary", use_container_width=True):
-                # Store confirmed knowledge and skills
+            if st.button("✅ Approve & Design Lessons", type="primary", use_container_width=True):
+                # Store confirmed data
                 confirmed_knowledge = [
                     item for item in ks_data["knowledge"]
                     if st.session_state.lesson_data["selected_knowledge"].get(item["id"], False)
@@ -2210,6 +2359,13 @@ elif st.session_state.stage == 2:
                 ]
                 st.session_state.lesson_data["confirmed_knowledge"] = confirmed_knowledge
                 st.session_state.lesson_data["confirmed_skills"] = confirmed_skills
+
+                # Store approved lesson flow with any user modifications
+                approved_flow = flow_data.copy()
+                for i, lesson in enumerate(approved_flow.get("lessons", [])):
+                    lesson["lesson_type"] = st.session_state.lesson_data["lesson_types"].get(i, lesson.get("lesson_type"))
+                st.session_state.lesson_data["approved_flow"] = approved_flow
+
                 st.session_state.stage = 3
                 st.rerun()
 
@@ -2221,15 +2377,19 @@ elif st.session_state.stage == 3:
     st.markdown(f'<div class="stage-header"><span class="stage-header-icon">🎨</span> {header_text}</div>', unsafe_allow_html=True)
 
     input_data = st.session_state.lesson_data["input"]
+    approved_flow = st.session_state.lesson_data.get("approved_flow", {})
 
     lesson_info = f"{lesson_count} lessons × {input_data['duration']} min" if lesson_count > 1 else f"{input_data['duration']} min"
 
+    # Get flow title or fallback
+    flow_title = approved_flow.get('sequence_title', 'Lesson')
+
     st.markdown(f"""
     <div class="info-box">
-        <strong>Designing for:</strong> {input_data['competency']}<br>
+        <strong>Designing:</strong> {flow_title}<br>
+        <strong>Competency:</strong> {input_data['competency'][:100]}{'...' if len(input_data['competency']) > 100 else ''}<br>
         <strong>Grade:</strong> {input_data['grade_level']} |
-        <strong>Duration:</strong> {lesson_info} |
-        <strong>Type:</strong> {input_data['lesson_type'].replace('_', ' ').title()}
+        <strong>Duration:</strong> {lesson_info}
     </div>
     """, unsafe_allow_html=True)
 
@@ -2253,7 +2413,7 @@ elif st.session_state.stage == 3:
     with st.spinner(spinner_text):
         try:
             marzano = load_marzano_framework()
-            lesson = design_lesson_with_claude(input_data, marzano, confirmed_knowledge, confirmed_skills, redesign_concerns, user_feedback)
+            lesson = design_lesson_with_claude(input_data, marzano, confirmed_knowledge, confirmed_skills, redesign_concerns, user_feedback, approved_flow)
 
             # Clear redesign data after use
             if "selected_concerns" in st.session_state.lesson_data:
@@ -2284,21 +2444,10 @@ elif st.session_state.stage == 3:
 
 # Stage 4: Persona Feedback
 elif st.session_state.stage == 4:
-    st.markdown('<div class="stage-header"><span class="stage-header-icon">👥</span> Student Persona Review</div>', unsafe_allow_html=True)
+    st.markdown('<div class="stage-header"><span class="stage-header-icon">👥</span> Review Your Lessons</div>', unsafe_allow_html=True)
 
     lesson_or_sequence = st.session_state.lesson_data["lesson"]
     is_sequence = lesson_or_sequence.get('is_sequence', False)
-
-    # Show current competency info
-    current_idx = st.session_state.current_competency_index
-    total_competencies = len(st.session_state.competency_queue)
-    if total_competencies > 1:
-        st.markdown(f'<p style="color: {LIGHT_GREEN}; font-weight: 600;">Competency {current_idx + 1} of {total_competencies}</p>', unsafe_allow_html=True)
-
-    # Show lesson/sequence in readable format
-    expander_title = "📋 View Your Lesson Sequence" if is_sequence else "📋 View Your Lesson Design"
-    with st.expander(expander_title, expanded=False):
-        st.markdown(format_lesson_display(lesson_or_sequence), unsafe_allow_html=True)
 
     # Calculate cognitive distribution
     if is_sequence:
@@ -2310,7 +2459,7 @@ elif st.session_state.stage == 4:
             a["duration"] for a in all_activities
             if a.get("marzano_level") in ["analysis", "knowledge_utilization"]
         )
-        total_lessons = lesson_or_sequence.get("total_lessons", 1)
+        total_lessons = lesson_or_sequence.get("total_lessons", len(lesson_or_sequence.get("lessons", [])))
     else:
         all_activities = lesson_or_sequence.get("activities", [])
         total_time = sum(a["duration"] for a in all_activities)
@@ -2322,6 +2471,7 @@ elif st.session_state.stage == 4:
 
     cognitive_percent = (higher_order_time / total_time * 100) if total_time > 0 else 0
 
+    # Quick stats row
     col1, col2, col3, col4 = st.columns(4)
     with col1:
         st.metric("Lessons", total_lessons)
@@ -2332,6 +2482,30 @@ elif st.session_state.stage == 4:
     with col4:
         status = "✅ Pass" if cognitive_percent >= 40 else "⚠️ Low"
         st.metric("Rigor", status)
+
+    # COLLAPSIBLE AGENDA VIEW
+    st.markdown("### 📋 Lesson Agenda")
+    st.markdown('<p style="color: #666; font-size: 0.9rem;">Click any lesson to see full details.</p>', unsafe_allow_html=True)
+
+    if is_sequence:
+        # Show sequence overview
+        st.markdown(format_sequence_overview_compact(lesson_or_sequence), unsafe_allow_html=True)
+
+        # Show each lesson as collapsible
+        for lesson in lesson_or_sequence.get("lessons", []):
+            lesson_num = lesson.get('lesson_number', 1)
+            lesson_title = lesson.get('title', f'Lesson {lesson_num}')
+            lesson_type = lesson.get('lesson_type', 'introducing').replace('_', ' ').title()
+
+            # Compact agenda as expander header content
+            with st.expander(f"**Lesson {lesson_num}:** {lesson_title} ({lesson_type})", expanded=False):
+                st.markdown(format_single_lesson_html(lesson, lesson_num), unsafe_allow_html=True)
+    else:
+        # Single lesson - show compact agenda then expandable detail
+        st.markdown(format_compact_agenda(lesson_or_sequence), unsafe_allow_html=True)
+
+        with st.expander("📖 View Full Lesson Details", expanded=False):
+            st.markdown(format_single_lesson_html(lesson_or_sequence), unsafe_allow_html=True)
 
     st.divider()
 
@@ -2345,7 +2519,7 @@ elif st.session_state.stage == 4:
         for i, (persona_key, persona) in enumerate(PERSONAS.items()):
             with st.spinner(f"Getting feedback from {persona['name']} ({persona['type']})..."):
                 try:
-                    feedback = get_persona_feedback(lesson, persona_key, persona)
+                    feedback = get_persona_feedback(lesson_or_sequence, persona_key, persona)
                     feedback_list.append(feedback)
                 except Exception as e:
                     st.warning(f"Could not get feedback from {persona['name']}: {e}")
@@ -2364,96 +2538,66 @@ elif st.session_state.stage == 4:
     else:
         feedback_list = st.session_state.lesson_data["persona_feedback"]
 
-        st.markdown("### 👥 Persona Feedback")
+        st.divider()
+        st.markdown("### 👥 Student Persona Feedback")
+        st.markdown('<p style="color: #666; font-size: 0.9rem;">Quick feedback from different student perspectives. Check concerns to address in redesign.</p>', unsafe_allow_html=True)
 
-        # Display each persona's feedback
+        # Display personas in a compact 2-column grid
+        cols = st.columns(2)
+        col_idx = 0
+
         for feedback in feedback_list:
             persona_key = feedback.get("persona_key", "")
             persona = PERSONAS.get(persona_key, {})
-
             rating = feedback.get("overall_rating", 3)
-            stars = "⭐" * rating + "☆" * (5 - rating)
-
-            st.markdown(f"""
-            <div class="persona-card">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-                    <div>
-                        <span style="font-size: 1.5rem;">{persona.get('icon', '👤')}</span>
-                        <span class="persona-name">{feedback.get('persona_name', 'Student')}</span>
-                        <div class="persona-type">{persona.get('type', '')}</div>
-                    </div>
-                    <div class="rating">{stars}</div>
-                </div>
-                <div class="persona-traits">
-                    <strong>Key traits:</strong> {', '.join(persona.get('traits', [])[:2])}
-                </div>
-                <p style="margin-top: 0.75rem; font-style: italic; color: #555;">
-                    "{feedback.get('reaction', 'No reaction provided.')}"
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-
-            # Show concerns with checkboxes
             concerns = feedback.get("concerns", [])
-            if concerns:
-                st.markdown(f"**Concerns from {feedback.get('persona_name')}:**")
-                for idx, concern in enumerate(concerns):
-                    concern_id = concern.get("id", f"{persona_key}_{idx}")
-                    # Create a unique key combining persona and index
-                    unique_key = f"{persona_key}_{idx}_{concern_id}"
-                    severity = concern.get("severity", "medium")
 
-                    col1, col2 = st.columns([0.05, 0.95])
-                    with col1:
-                        # Checkbox for selecting this concern
+            with cols[col_idx % 2]:
+                # Compact persona card
+                rating_color = "#4CAF50" if rating >= 4 else "#FFC107" if rating >= 3 else "#f44336"
+                st.markdown(f"""
+                <div style="background: #fafafa; border-radius: 8px; padding: 0.75rem; margin-bottom: 0.75rem; border-left: 3px solid {rating_color};">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-weight: 600;">{persona.get('icon', '👤')} {feedback.get('persona_name', 'Student')}</span>
+                        <span style="color: {rating_color}; font-weight: bold;">{rating}/5</span>
+                    </div>
+                    <p style="font-size: 0.85rem; color: #555; margin: 0.5rem 0; font-style: italic;">"{feedback.get('reaction', '')}"</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                # Compact concerns as bullets with checkboxes
+                if concerns:
+                    for idx, concern in enumerate(concerns[:3]):  # Max 3 concerns
+                        concern_id = concern.get("id", f"{persona_key}_{idx}")
+                        unique_key = f"{persona_key}_{idx}_{concern_id}"
+                        severity = concern.get("severity", "medium")
+                        severity_icon = "🔴" if severity == "high" else "🟡"
+
                         is_selected = st.checkbox(
-                            "",
+                            f"{severity_icon} {concern.get('issue', 'Issue')}",
                             value=st.session_state.selected_feedback.get(unique_key, True),
                             key=f"cb_{unique_key}",
-                            label_visibility="collapsed"
+                            help=f"💡 {concern.get('recommendation', '')}"
                         )
                         st.session_state.selected_feedback[unique_key] = is_selected
 
-                    with col2:
-                        severity_class = f"concern-{severity}"
-                        st.markdown(f"""
-                        <div class="{severity_class}">
-                            <strong>{concern.get('element', 'Issue').title()}</strong>
-                            <span style="font-size: 0.75rem; color: #888;">({severity} priority)</span><br>
-                            {concern.get('issue', '')}<br>
-                            <em style="color: #666;">💡 {concern.get('recommendation', '')}</em>
-                        </div>
-                        """, unsafe_allow_html=True)
+                # Differentiated materials options - compact
+                if persona_key == "alex" and concerns:
+                    st.session_state.generate_modified_materials = st.checkbox(
+                        "📝 Generate scaffolded materials",
+                        value=st.session_state.generate_modified_materials,
+                        key="generate_modified_checkbox",
+                        help="Word banks, sentence starters for struggling learners"
+                    )
+                elif persona_key == "marcus" and concerns:
+                    st.session_state.generate_extension_materials = st.checkbox(
+                        "🚀 Generate extension materials",
+                        value=st.session_state.generate_extension_materials,
+                        key="generate_extension_checkbox",
+                        help="Deeper questions, challenges for advanced learners"
+                    )
 
-            # Add option to generate modified/extension materials for Alex and Marcus
-            if persona_key == "alex" and concerns:
-                st.markdown("")
-                st.markdown(f'''
-                <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 2px solid #1976d2; border-radius: 8px; padding: 1rem; margin: 0.5rem 0;">
-                    <p style="color: #1565c0; font-weight: 600; margin: 0 0 0.5rem 0;">📝 Differentiated Materials Option</p>
-                    <p style="color: #424242; font-size: 0.9rem; margin: 0;">Create an additional worksheet with scaffolds (word banks, sentence starters, visual supports) for struggling learners.</p>
-                </div>
-                ''', unsafe_allow_html=True)
-                st.session_state.generate_modified_materials = st.checkbox(
-                    "Generate modified materials for struggling learners",
-                    value=st.session_state.generate_modified_materials,
-                    key="generate_modified_checkbox"
-                )
-            elif persona_key == "marcus" and concerns:
-                st.markdown("")
-                st.markdown(f'''
-                <div style="background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border: 2px solid #1976d2; border-radius: 8px; padding: 1rem; margin: 0.5rem 0;">
-                    <p style="color: #1565c0; font-weight: 600; margin: 0 0 0.5rem 0;">🚀 Differentiated Materials Option</p>
-                    <p style="color: #424242; font-size: 0.9rem; margin: 0;">Create an additional worksheet with challenges (deeper questions, research prompts, creative extensions) for advanced learners.</p>
-                </div>
-                ''', unsafe_allow_html=True)
-                st.session_state.generate_extension_materials = st.checkbox(
-                    "Generate extension materials for advanced learners",
-                    value=st.session_state.generate_extension_materials,
-                    key="generate_extension_checkbox"
-                )
-
-            st.markdown("")  # Spacing
+            col_idx += 1
 
         st.divider()
 
@@ -2461,17 +2605,8 @@ elif st.session_state.stage == 4:
         selected_count = sum(1 for v in st.session_state.selected_feedback.values() if v)
         total_concerns = len(st.session_state.selected_feedback)
 
-        st.markdown(f"**Selected {selected_count} of {total_concerns} concerns for redesign**")
-
-        # Show what additional materials will be generated
-        additional_materials = []
-        if st.session_state.generate_modified_materials:
-            additional_materials.append("modified worksheet (struggling learners)")
-        if st.session_state.generate_extension_materials:
-            additional_materials.append("extension worksheet (advanced learners)")
-
-        if additional_materials:
-            st.markdown(f"**Additional materials to generate:** {', '.join(additional_materials)}")
+        if total_concerns > 0:
+            st.markdown(f"**{selected_count} of {total_concerns} concerns selected for redesign**")
 
         # User feedback text area for additional redesign guidance
         st.markdown("### ✏️ Additional Feedback (Optional)")

@@ -140,77 +140,170 @@ def add_light_background(prs, slide):
 
 
 def create_hidden_lesson_plan(prs, slide, lesson):
-    """Create hidden first slide with lesson plan for teacher."""
+    """Create hidden first slide with compact lesson plan for teacher.
+
+    Format follows the simple skill pattern:
+    Objective: [Student-friendly daily objective]
+    1. Do Now (5 min): Activity description + notes
+    2. Framing (3 min): Hook + key concept
+    ...
+    Materials: worksheet, slides, etc.
+    """
     slide._element.set('show', '0')  # HIDE this slide
 
-    # Get slide content - check both new schema (slide_content) and legacy (hidden_slide_content)
+    # Get slide content and activities
     slide_content = lesson.get('slide_content', lesson.get('hidden_slide_content', {}))
+    activities = lesson.get('activities', [])
 
-    # Title
-    title = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(12), Inches(0.6))
+    # Title - compact header
+    title = slide.shapes.add_textbox(Inches(0.3), Inches(0.2), Inches(12.5), Inches(0.5))
     tf = title.text_frame
     p = tf.paragraphs[0]
     run = p.add_run()
-    run.text = '📋 LESSON PLAN (Teacher Reference Only)'
-    run.font.size = Pt(28)
+    lesson_title = lesson.get('title', 'Lesson Plan')
+    run.text = f'📋 {lesson_title} - Teacher Notes'
+    run.font.size = Pt(24)
     run.font.bold = True
     run.font.color.rgb = HEADER_BLUE
 
-    # Objective
-    obj_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(12), Inches(0.8))
+    # Objective - prominent
+    obj_box = slide.shapes.add_textbox(Inches(0.3), Inches(0.7), Inches(12.5), Inches(0.6))
     tf = obj_box.text_frame
+    tf.word_wrap = True
     p = tf.paragraphs[0]
     run1 = p.add_run()
-    run1.text = 'OBJECTIVE: '
+    run1.text = 'Objective: '
     run1.font.bold = True
-    run1.font.size = Pt(16)
+    run1.font.size = Pt(14)
+    run1.font.color.rgb = HEADER_BLUE
     run2 = p.add_run()
-    run2.text = lesson['objective']
-    run2.font.size = Pt(16)
+    objective = lesson.get('objective', 'Not specified')
+    run2.text = objective[:150] if len(objective) > 150 else objective
+    run2.font.size = Pt(14)
 
-    # Agenda
-    agenda_box = slide.shapes.add_textbox(Inches(0.5), Inches(1.8), Inches(6), Inches(2.5))
+    # Numbered agenda with activity descriptions
+    agenda_box = slide.shapes.add_textbox(Inches(0.3), Inches(1.4), Inches(7.5), Inches(4.5))
     tf = agenda_box.text_frame
-    p = tf.paragraphs[0]
-    run = p.add_run()
-    run.text = 'AGENDA:'
-    run.font.bold = True
-    run.font.size = Pt(16)
-    for item in slide_content.get('agenda', []):
-        p = tf.add_paragraph()
-        run = p.add_run()
-        run.text = f"  • {item['activity']} ({item['duration']} min)"
-        run.font.size = Pt(14)
+    tf.word_wrap = True
 
-    # Misconceptions
-    misc_box = slide.shapes.add_textbox(Inches(6.5), Inches(1.8), Inches(6), Inches(2.5))
-    tf = misc_box.text_frame
-    p = tf.paragraphs[0]
-    run = p.add_run()
-    run.text = 'WATCH FOR (Misconceptions):'
-    run.font.bold = True
-    run.font.size = Pt(16)
-    for misc in slide_content.get('misconceptions', [])[:3]:
-        p = tf.add_paragraph()
-        run = p.add_run()
-        text = f"  ⚠️ {misc[:80]}..." if len(misc) > 80 else f"  ⚠️ {misc}"
-        run.text = text
-        run.font.size = Pt(12)
+    for i, activity in enumerate(activities[:8], 1):  # Max 8 activities
+        name = activity.get('name', 'Activity')
+        duration = activity.get('duration', 0)
+        task_type = activity.get('task_type', '')
+        marzano = activity.get('marzano_level', '')
 
-    # Delivery tips
-    tips_box = slide.shapes.add_textbox(Inches(0.5), Inches(4.5), Inches(12), Inches(2.5))
-    tf = tips_box.text_frame
+        # First line: number, name, duration
+        if i == 1:
+            p = tf.paragraphs[0]
+        else:
+            p = tf.add_paragraph()
+
+        run = p.add_run()
+        run.text = f"{i}. {name} ({duration} min)"
+        run.font.size = Pt(13)
+        run.font.bold = True
+        run.font.color.rgb = BODY_CHARCOAL
+
+        # Second line: brief description or instructions
+        p2 = tf.add_paragraph()
+        instructions = activity.get('instructions', [])
+        student_directions = activity.get('student_directions', '')
+
+        # Build a concise description
+        desc_parts = []
+        if task_type:
+            desc_parts.append(task_type.replace('_', ' ').title())
+        if marzano:
+            desc_parts.append(f"[{marzano.replace('_', ' ').title()}]")
+
+        brief_desc = ' • '.join(desc_parts)
+        if student_directions:
+            brief_desc += f" - {student_directions[:60]}{'...' if len(student_directions) > 60 else ''}"
+        elif instructions:
+            brief_desc += f" - {instructions[0][:60]}{'...' if len(instructions[0]) > 60 else ''}"
+
+        run2 = p2.add_run()
+        run2.text = f"    {brief_desc}"
+        run2.font.size = Pt(11)
+        run2.font.color.rgb = RGBColor(0x66, 0x66, 0x66)
+
+    # Right column: Materials, misconceptions, key tips
+    right_box = slide.shapes.add_textbox(Inches(8), Inches(1.4), Inches(5), Inches(4.5))
+    tf = right_box.text_frame
+    tf.word_wrap = True
+
+    # Materials section
     p = tf.paragraphs[0]
     run = p.add_run()
-    run.text = 'DELIVERY TIPS:'
+    run.text = 'Materials:'
     run.font.bold = True
-    run.font.size = Pt(16)
-    for tip in slide_content.get('delivery_tips', [])[:4]:
-        p = tf.add_paragraph()
+    run.font.size = Pt(12)
+    run.font.color.rgb = HEADER_BLUE
+
+    # Collect all materials from activities
+    all_materials = set()
+    for activity in activities:
+        for mat in activity.get('materials', []):
+            all_materials.add(mat)
+
+    if all_materials:
+        p2 = tf.add_paragraph()
+        run2 = p2.add_run()
+        run2.text = ', '.join(list(all_materials)[:5])
+        run2.font.size = Pt(11)
+    else:
+        p2 = tf.add_paragraph()
+        run2 = p2.add_run()
+        run2.text = 'Slides, worksheet'
+        run2.font.size = Pt(11)
+
+    # Watch for (misconceptions) - compact
+    misconceptions = slide_content.get('misconceptions', [])
+    if misconceptions:
+        p3 = tf.add_paragraph()
+        p3.space_before = Pt(12)
+        run3 = p3.add_run()
+        run3.text = 'Watch For:'
+        run3.font.bold = True
+        run3.font.size = Pt(12)
+        run3.font.color.rgb = HEADER_BLUE
+
+        for misc in misconceptions[:3]:
+            p4 = tf.add_paragraph()
+            run4 = p4.add_run()
+            text = misc[:70] + '...' if len(misc) > 70 else misc
+            run4.text = f"⚠️ {text}"
+            run4.font.size = Pt(10)
+
+    # Key tips - compact
+    tips = slide_content.get('delivery_tips', [])
+    if tips:
+        p5 = tf.add_paragraph()
+        p5.space_before = Pt(12)
+        run5 = p5.add_run()
+        run5.text = 'Key Tips:'
+        run5.font.bold = True
+        run5.font.size = Pt(12)
+        run5.font.color.rgb = HEADER_BLUE
+
+        for tip in tips[:3]:
+            p6 = tf.add_paragraph()
+            run6 = p6.add_run()
+            text = tip[:70] + '...' if len(tip) > 70 else tip
+            run6.text = f"💡 {text}"
+            run6.font.size = Pt(10)
+
+    # Essential Question at bottom if present
+    essential_q = lesson.get('essential_question', '')
+    if essential_q:
+        eq_box = slide.shapes.add_textbox(Inches(0.3), Inches(6.2), Inches(12.5), Inches(0.6))
+        tf = eq_box.text_frame
+        p = tf.paragraphs[0]
         run = p.add_run()
-        text = f"  💡 {tip[:100]}" if len(tip) > 100 else f"  💡 {tip}"
-        run.text = text
-        run.font.size = Pt(12)
+        run.text = f'Essential Q: {essential_q[:120]}'
+        run.font.size = Pt(11)
+        run.font.italic = True
+        run.font.color.rgb = BODY_CHARCOAL
 
 
 def create_title_slide(prs, slide, lesson):
