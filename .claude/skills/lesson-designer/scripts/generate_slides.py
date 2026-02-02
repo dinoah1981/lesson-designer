@@ -143,6 +143,9 @@ def create_hidden_lesson_plan(prs, slide, lesson):
     """Create hidden first slide with lesson plan for teacher."""
     slide._element.set('show', '0')  # HIDE this slide
 
+    # Get slide content - check both new schema (slide_content) and legacy (hidden_slide_content)
+    slide_content = lesson.get('slide_content', lesson.get('hidden_slide_content', {}))
+
     # Title
     title = slide.shapes.add_textbox(Inches(0.5), Inches(0.3), Inches(12), Inches(0.6))
     tf = title.text_frame
@@ -173,7 +176,7 @@ def create_hidden_lesson_plan(prs, slide, lesson):
     run.text = 'AGENDA:'
     run.font.bold = True
     run.font.size = Pt(16)
-    for item in lesson.get('hidden_slide_content', {}).get('agenda', []):
+    for item in slide_content.get('agenda', []):
         p = tf.add_paragraph()
         run = p.add_run()
         run.text = f"  • {item['activity']} ({item['duration']} min)"
@@ -187,7 +190,7 @@ def create_hidden_lesson_plan(prs, slide, lesson):
     run.text = 'WATCH FOR (Misconceptions):'
     run.font.bold = True
     run.font.size = Pt(16)
-    for misc in lesson.get('hidden_slide_content', {}).get('misconceptions', [])[:3]:
+    for misc in slide_content.get('misconceptions', [])[:3]:
         p = tf.add_paragraph()
         run = p.add_run()
         text = f"  ⚠️ {misc[:80]}..." if len(misc) > 80 else f"  ⚠️ {misc}"
@@ -202,7 +205,7 @@ def create_hidden_lesson_plan(prs, slide, lesson):
     run.text = 'DELIVERY TIPS:'
     run.font.bold = True
     run.font.size = Pt(16)
-    for tip in lesson.get('hidden_slide_content', {}).get('delivery_tips', [])[:4]:
+    for tip in slide_content.get('delivery_tips', [])[:4]:
         p = tf.add_paragraph()
         run = p.add_run()
         text = f"  💡 {tip[:100]}" if len(tip) > 100 else f"  💡 {tip}"
