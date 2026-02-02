@@ -341,9 +341,9 @@ def create_discussion_slide(prs, slide, activity):
     run.font.size = Pt(18)
     run.font.color.rgb = HEADER_BLUE
 
-    # Get opening from activity or generate default
-    opening = activity.get('discussion_structure', {}).get('opening',
-        activity.get('instructions', [''])[0] if activity.get('instructions') else 'Opening question...')
+    # Get opening - prefer student_directions over teacher instructions
+    student_directions = activity.get('student_directions', '')
+    opening = activity.get('discussion_structure', {}).get('opening', student_directions or 'Think about the topic...')
     p2 = tf.add_paragraph()
     run2 = p2.add_run()
     run2.text = opening[:100] if len(str(opening)) > 100 else str(opening)
@@ -362,9 +362,9 @@ def create_discussion_slide(prs, slide, activity):
     run.font.size = Pt(18)
     run.font.color.rgb = HEADER_BLUE
 
-    # Discussion prompts
+    # Discussion prompts - prefer student_questions or discussion_questions
     prompts = activity.get('discussion_structure', {}).get('prompts',
-        activity.get('instructions', ['Discuss the main concepts...']))
+        activity.get('student_questions', activity.get('discussion_questions', ['What do you think about this topic?'])))
     for prompt in prompts[:3]:
         p = tf.add_paragraph()
         run = p.add_run()
@@ -421,51 +421,113 @@ PROMPTS TO USE:
 
 
 def create_activity_slide(prs, slide, activity):
-    """Create slide for individual activity."""
-    icon = ICONS.get(activity['marzano_level'], '📌')
+    """Create slide for individual activity with student-facing content."""
+    icon = ICONS.get(activity.get('marzano_level', 'comprehension'), '📌')
 
     add_header_bar(
         prs, slide,
         f"{icon} {activity['name']}",
-        subtitle_text=activity['marzano_level'].replace('_', ' ').title(),
-        timer_text=f"⏱️ {activity['duration']}m"
+        subtitle_text=activity.get('marzano_level', 'comprehension').replace('_', ' ').title(),
+        timer_text=f"⏱️ {activity.get('duration', 10)}m"
     )
 
     add_light_background(prs, slide)
 
-    # Content box
-    add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(12.333), Inches(5))
+    # Get student-facing content
+    student_directions = activity.get('student_directions', '')
+    student_questions = activity.get('student_questions', [])
+    discussion_questions = activity.get('discussion_questions', [])
+    visual_description = activity.get('visual_description', '')
 
-    # Instructions as bullet points
-    instr_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.1), Inches(11.7), Inches(4.5))
-    tf = instr_box.text_frame
+    # Layout depends on whether we have a visual
+    if visual_description:
+        # Split layout: image placeholder on left, content on right
+        # Image placeholder box
+        add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(5.5), Inches(4.5))
+        img_box = slide.shapes.add_textbox(Inches(0.8), Inches(3.5), Inches(5), Inches(1))
+        tf = img_box.text_frame
+        tf.word_wrap = True
+        p = tf.paragraphs[0]
+        p.alignment = PP_ALIGN.CENTER
+        run = p.add_run()
+        run.text = f"[IMAGE: {visual_description[:60]}]"
+        run.font.size = Pt(14)
+        run.font.italic = True
+        run.font.color.rgb = RGBColor(128, 128, 128)
+
+        # Content on right side
+        add_content_box(prs, slide, Inches(6.2), Inches(1.8), Inches(6.633), Inches(4.5))
+        content_left = 6.5
+        content_width = 6
+    else:
+        # Full width content
+        add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(12.333), Inches(5))
+        content_left = 0.8
+        content_width = 11.7
+
+    # Content text box
+    content_box = slide.shapes.add_textbox(Inches(content_left), Inches(2.1), Inches(content_width), Inches(4.5))
+    tf = content_box.text_frame
     tf.word_wrap = True
 
-    # Use key_points if available, otherwise use instructions
-    key_points = activity.get('key_points', activity.get('instructions', []))[:5]
-    for i, point in enumerate(key_points):
-        if i == 0:
-            p = tf.paragraphs[0]
-        else:
-            p = tf.add_paragraph()
-        p.level = 0
+    # Add student directions first
+    if student_directions:
+        p = tf.paragraphs[0]
         run = p.add_run()
-        # Truncate long points
-        text = point if len(point) <= 60 else point[:57] + '...'
-        run.text = f"• {text}"
+        run.text = student_directions[:150] if len(student_directions) > 150 else student_directions
+        run.font.size = Pt(20)
+        run.font.color.rgb = BODY_CHARCOAL
+        p.space_after = Pt(18)
+
+    # Add student questions or discussion questions
+    questions = student_questions or discussion_questions
+    if questions:
+        for i, q in enumerate(questions[:4]):  # Max 4 questions per slide
+            p = tf.add_paragraph() if (student_directions or i > 0) else tf.paragraphs[0]
+            run = p.add_run()
+            q_text = q[:80] if len(q) > 80 else q
+            run.text = f"{i+1}. {q_text}"
+            run.font.size = Pt(18)
+            run.font.color.rgb = BODY_CHARCOAL
+            p.space_after = Pt(12)
+
+    # If no student content, fall back to a generic prompt
+    if not student_directions and not questions:
+        p = tf.paragraphs[0]
+        run = p.add_run()
+        run.text = f"Complete the {activity['name']} activity."
         run.font.size = Pt(24)
         run.font.color.rgb = BODY_CHARCOAL
-        p.space_after = Pt(12)
 
-    # Add presenter notes
+    # Add presenter notes with TEACHER instructions
     notes_slide = slide.notes_slide
     notes_tf = notes_slide.notes_text_frame
-    notes_tf.text = f"SAY: Introduce {activity['name']} activity\n\n"
-    notes_tf.text += "ASK: Check for understanding questions\n\n"
-    notes_tf.text += f"WATCH FOR: {activity.get('assessment_method', 'Student engagement')}\n\n"
-    notes_tf.text += "Instructions:\n"
-    for instr in activity.get('instructions', []):
-        notes_tf.text += f"- {instr}\n"
+    notes_tf.text = f"TEACHER GUIDE: {activity['name']}\n\n"
+    notes_tf.text += f"TIME: {activity.get('duration', 10)} minutes\n\n"
+
+    # Teacher moves go in notes
+    teacher_moves = activity.get('teacher_moves', [])
+    if teacher_moves:
+        notes_tf.text += "TEACHER MOVES:\n"
+        for move in teacher_moves:
+            notes_tf.text += f"- {move}\n"
+        notes_tf.text += "\n"
+
+    # Instructions (teacher steps) go in notes
+    instructions = activity.get('instructions', [])
+    if instructions:
+        notes_tf.text += "STEP-BY-STEP:\n"
+        for i, instr in enumerate(instructions):
+            notes_tf.text += f"{i+1}. {instr}\n"
+        notes_tf.text += "\n"
+
+    notes_tf.text += f"ASSESSMENT: {activity.get('assessment_method', 'Observe student work')}\n"
+
+    # Differentiation notes
+    diff = activity.get('differentiation', {})
+    if diff:
+        notes_tf.text += f"\nSUPPORT: {diff.get('support', 'Provide scaffolding')}\n"
+        notes_tf.text += f"EXTENSION: {diff.get('extension', 'Challenge with deeper questions')}\n"
 
 
 def create_vocabulary_slide(prs, slide, vocab):

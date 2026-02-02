@@ -102,6 +102,40 @@ def add_instructions(doc: Document, text: str) -> None:
         run.font.size = Pt(10)
 
 
+def add_image_placeholder(doc: Document, description: str) -> None:
+    """Add a bordered placeholder box for an image with description."""
+    # Create a single-cell table to act as a bordered box
+    table = doc.add_table(rows=1, cols=1)
+    table.style = 'Table Grid'
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    cell = table.rows[0].cells[0]
+    cell.width = Inches(5)
+
+    # Add placeholder text
+    p = cell.paragraphs[0]
+    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    run = p.add_run("[IMAGE: ")
+    run.font.size = Pt(10)
+    run.font.italic = True
+
+    run2 = p.add_run(description[:100])
+    run2.font.size = Pt(10)
+    run2.font.italic = True
+
+    run3 = p.add_run("]")
+    run3.font.size = Pt(10)
+    run3.font.italic = True
+
+    # Add some height to the cell for visual space
+    p2 = cell.add_paragraph()
+    p2.add_run("\n")
+
+    # Add spacing after
+    doc.add_paragraph()
+
+
 def add_answer_lines(doc: Document, num_lines: int = 3, prefix: str = "") -> None:
     """Add underscore answer lines with double-spacing for student responses."""
     for i in range(num_lines):
@@ -233,8 +267,12 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
     for activity in activities:
         name = activity.get('name', f'Activity {part_num}')
         marzano_level = activity.get('marzano_level', 'comprehension')
-        instructions = activity.get('instructions', [])
-        materials = activity.get('materials', [])
+
+        # Prefer student-facing content over teacher instructions
+        student_directions = activity.get('student_directions', '')
+        student_questions = activity.get('student_questions', [])
+        discussion_questions = activity.get('discussion_questions', [])
+        visual_description = activity.get('visual_description', '')
 
         # Determine answer line count based on cognitive complexity
         answer_line_count = WRITING_SPACE_CONFIG.get(marzano_level, WRITING_SPACE_CONFIG['default'])
@@ -246,21 +284,20 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
         # Add part header
         add_part_header(doc, part_num, name)
 
-        # Add instructions if present
-        if instructions:
-            if isinstance(instructions, list):
-                instr_text = ' '.join(instructions[:2])  # Keep it brief
-            else:
-                instr_text = str(instructions)
-            add_instructions(doc, instr_text[:200])  # Truncate if too long
+        # Add visual placeholder if specified
+        if visual_description:
+            add_image_placeholder(doc, visual_description)
+
+        # Add student directions (the actual task prompt students see)
+        if student_directions:
+            add_instructions(doc, student_directions)
 
         # Determine content type based on activity characteristics
         # Check for ranking/comparison activities
         if any(word in name.lower() for word in ['rank', 'order', 'compare', 'sort']):
-            # Extract items to rank if available, otherwise use generic
             items_to_rank = activity.get('items', ['Item A', 'Item B', 'Item C', 'Item D'])
             if isinstance(items_to_rank, list) and len(items_to_rank) > 0:
-                add_ranking_table(doc, items_to_rank[:5])  # Max 5 items
+                add_ranking_table(doc, items_to_rank[:5])
             add_instructions(doc, "Explain your #1 choice:")
             add_answer_lines(doc, answer_line_count)
 
@@ -268,23 +305,20 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
         elif any(word in name.lower() for word in ['definition', 'vocabulary', 'terms', 'key words']):
             vocab = lesson.get('vocabulary', [])
             if vocab:
-                add_definition_table(doc, vocab[:6])  # Max 6 terms
+                add_definition_table(doc, vocab[:6])
             else:
                 add_answer_lines(doc, answer_line_count)
 
-        # Check for discussion/notes activities
-        elif any(word in name.lower() for word in ['discussion', 'notes', 'debrief']):
-            # Add discussion questions if available
-            questions = activity.get('discussion_questions', activity.get('questions', []))
-            if questions:
-                add_numbered_questions(doc, questions[:3], with_answer_space=True, num_lines=answer_line_count)
-            else:
-                add_instructions(doc, "Discussion Notes:")
-                add_answer_lines(doc, answer_line_count)
+        # Add student questions if present (primary content for worksheets)
+        elif student_questions:
+            add_numbered_questions(doc, student_questions, with_answer_space=True, num_lines=answer_line_count)
+
+        # Add discussion questions if present
+        elif discussion_questions:
+            add_numbered_questions(doc, discussion_questions, with_answer_space=True, num_lines=answer_line_count)
 
         # Check for analysis/application activities
         elif marzano_level in ['analysis', 'knowledge_utilization']:
-            # These need more structured response
             student_output = activity.get('student_output', '')
             if student_output:
                 add_instructions(doc, f"Your task: {student_output}")
