@@ -438,22 +438,37 @@ def create_activity_slide(prs, slide, activity):
     student_questions = activity.get('student_questions', [])
     discussion_questions = activity.get('discussion_questions', [])
     visual_description = activity.get('visual_description', '')
+    recommended_image = activity.get('recommended_image', {})
+
+    # Check if we have a visual (either description or recommended image)
+    has_visual = visual_description or recommended_image
+    img_desc = recommended_image.get('description', visual_description) or visual_description
+    img_url = recommended_image.get('url', '')
 
     # Layout depends on whether we have a visual
-    if visual_description:
+    if has_visual:
         # Split layout: image placeholder on left, content on right
         # Image placeholder box
         add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(5.5), Inches(4.5))
-        img_box = slide.shapes.add_textbox(Inches(0.8), Inches(3.5), Inches(5), Inches(1))
+        img_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.5), Inches(5), Inches(2.5))
         tf = img_box.text_frame
         tf.word_wrap = True
         p = tf.paragraphs[0]
         p.alignment = PP_ALIGN.CENTER
         run = p.add_run()
-        run.text = f"[IMAGE: {visual_description[:60]}]"
+        run.text = f"[IMAGE: {img_desc[:60]}]"
         run.font.size = Pt(14)
         run.font.italic = True
         run.font.color.rgb = RGBColor(128, 128, 128)
+
+        # Add URL if available
+        if img_url:
+            p2 = tf.add_paragraph()
+            p2.alignment = PP_ALIGN.CENTER
+            run2 = p2.add_run()
+            run2.text = img_url[:50] + "..." if len(img_url) > 50 else img_url
+            run2.font.size = Pt(10)
+            run2.font.color.rgb = RGBColor(0, 102, 204)  # Blue link color
 
         # Content on right side
         add_content_box(prs, slide, Inches(6.2), Inches(1.8), Inches(6.633), Inches(4.5))
@@ -504,6 +519,10 @@ def create_activity_slide(prs, slide, activity):
     notes_tf = notes_slide.notes_text_frame
     notes_tf.text = f"TEACHER GUIDE: {activity['name']}\n\n"
     notes_tf.text += f"TIME: {activity.get('duration', 10)} minutes\n\n"
+
+    # Add image URL if available
+    if img_url:
+        notes_tf.text += f"IMAGE URL: {img_url}\n\n"
 
     # Teacher moves go in notes
     teacher_moves = activity.get('teacher_moves', [])

@@ -102,8 +102,8 @@ def add_instructions(doc: Document, text: str) -> None:
         run.font.size = Pt(10)
 
 
-def add_image_placeholder(doc: Document, description: str) -> None:
-    """Add a bordered placeholder box for an image with description."""
+def add_image_placeholder(doc: Document, description: str, url: str = None) -> None:
+    """Add a bordered placeholder box for an image with description and optional link."""
     # Create a single-cell table to act as a bordered box
     table = doc.add_table(rows=1, cols=1)
     table.style = 'Table Grid'
@@ -128,12 +128,52 @@ def add_image_placeholder(doc: Document, description: str) -> None:
     run3.font.size = Pt(10)
     run3.font.italic = True
 
+    # Add URL as hyperlink if provided
+    if url:
+        p2 = cell.add_paragraph()
+        p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        add_hyperlink(p2, url, "View/Download Image")
+
     # Add some height to the cell for visual space
-    p2 = cell.add_paragraph()
-    p2.add_run("\n")
+    p3 = cell.add_paragraph()
+    p3.add_run("\n")
 
     # Add spacing after
     doc.add_paragraph()
+
+
+def add_hyperlink(paragraph, url: str, text: str):
+    """Add a hyperlink to a paragraph."""
+    # Create the hyperlink element
+    part = paragraph.part
+    r_id = part.relate_to(url, 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink', is_external=True)
+
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    # Style the hyperlink (blue, underlined)
+    color = OxmlElement('w:color')
+    color.set(qn('w:val'), '0000FF')
+    rPr.append(color)
+
+    u = OxmlElement('w:u')
+    u.set(qn('w:val'), 'single')
+    rPr.append(u)
+
+    sz = OxmlElement('w:sz')
+    sz.set(qn('w:val'), '18')  # 9pt
+    rPr.append(sz)
+
+    new_run.append(rPr)
+    text_elem = OxmlElement('w:t')
+    text_elem.text = text
+    new_run.append(text_elem)
+
+    hyperlink.append(new_run)
+    paragraph._p.append(hyperlink)
 
 
 def add_answer_lines(doc: Document, num_lines: int = 3, prefix: str = "") -> None:
@@ -273,6 +313,7 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
         student_questions = activity.get('student_questions', [])
         discussion_questions = activity.get('discussion_questions', [])
         visual_description = activity.get('visual_description', '')
+        recommended_image = activity.get('recommended_image', {})
 
         # Determine answer line count based on cognitive complexity
         answer_line_count = WRITING_SPACE_CONFIG.get(marzano_level, WRITING_SPACE_CONFIG['default'])
@@ -284,9 +325,11 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
         # Add part header
         add_part_header(doc, part_num, name)
 
-        # Add visual placeholder if specified
-        if visual_description:
-            add_image_placeholder(doc, visual_description)
+        # Add visual placeholder if specified (with URL if available from image search)
+        if visual_description or recommended_image:
+            img_desc = recommended_image.get('description', visual_description) or visual_description
+            img_url = recommended_image.get('url', '')
+            add_image_placeholder(doc, img_desc, img_url)
 
         # Add student directions (the actual task prompt students see)
         if student_directions:
