@@ -603,7 +603,7 @@ def load_marzano_framework():
     return ""
 
 
-def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledge: list = None, skills: list = None) -> dict:
+def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledge: list = None, skills: list = None, redesign_concerns: list = None, user_feedback: str = None) -> dict:
     """Use Claude to design a lesson or lesson sequence based on input."""
     client = get_claude_client()
 
@@ -619,6 +619,25 @@ def design_lesson_with_claude(input_data: dict, marzano_framework: str, knowledg
     if skills:
         skills_items = [s["item"] for s in skills]
         skills_text = f"\n\nCONFIRMED SKILLS (students must be able to do these):\n" + "\n".join(f"- {s}" for s in skills_items)
+
+    # Format redesign concerns and user feedback if this is a redesign
+    redesign_text = ""
+    if redesign_concerns or user_feedback:
+        redesign_text = "\n\n🔄 REDESIGN REQUEST - Address the following:\n"
+        if redesign_concerns:
+            redesign_text += "\nPERSONA FEEDBACK TO ADDRESS:\n"
+            for concern in redesign_concerns:
+                persona = concern.get('from_persona', 'Student')
+                element = concern.get('element', 'General')
+                issue = concern.get('issue', '')
+                recommendation = concern.get('recommendation', '')
+                redesign_text += f"- [{persona}] {element}: {issue}"
+                if recommendation:
+                    redesign_text += f" → Recommendation: {recommendation}"
+                redesign_text += "\n"
+        if user_feedback:
+            redesign_text += f"\nADDITIONAL USER GUIDANCE:\n{user_feedback}\n"
+        redesign_text += "\nIMPORTANT: Create an IMPROVED lesson that specifically addresses ALL the concerns and feedback above while maintaining pedagogical quality."
 
     # Subject-specific pedagogical guidance based on research
     subject_pedagogy = """
@@ -700,7 +719,7 @@ Design a complete lesson based on this input:
 - Grade Level: {input_data['grade_level']}
 - Duration: {input_data['duration']} minutes
 - Lesson Type: {input_data['lesson_type']}
-- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}
+- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}{redesign_text}
 
 {subject_pedagogy}
 
@@ -827,7 +846,7 @@ Design a {lesson_count}-LESSON SEQUENCE based on this input:
 - Grade Level: {input_data['grade_level']}
 - Duration per lesson: {input_data['duration']} minutes
 - Total lessons: {lesson_count}
-- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}
+- Constraints: {input_data.get('constraints', 'None')}{knowledge_text}{skills_text}{redesign_text}
 
 {subject_pedagogy}
 
@@ -2198,10 +2217,22 @@ elif st.session_state.stage == 3:
         </div>
         """, unsafe_allow_html=True)
 
-    with st.spinner("🎨 Claude is designing your lesson using Marzano's taxonomy..."):
+    # Check if this is a redesign (has selected concerns or user feedback)
+    redesign_concerns = st.session_state.lesson_data.get("selected_concerns", [])
+    user_feedback = st.session_state.lesson_data.get("user_redesign_feedback", "")
+
+    spinner_text = "🔄 Claude is redesigning your lesson based on feedback..." if (redesign_concerns or user_feedback) else "🎨 Claude is designing your lesson using Marzano's taxonomy..."
+
+    with st.spinner(spinner_text):
         try:
             marzano = load_marzano_framework()
-            lesson = design_lesson_with_claude(input_data, marzano, confirmed_knowledge, confirmed_skills)
+            lesson = design_lesson_with_claude(input_data, marzano, confirmed_knowledge, confirmed_skills, redesign_concerns, user_feedback)
+
+            # Clear redesign data after use
+            if "selected_concerns" in st.session_state.lesson_data:
+                del st.session_state.lesson_data["selected_concerns"]
+            if "user_redesign_feedback" in st.session_state.lesson_data:
+                del st.session_state.lesson_data["user_redesign_feedback"]
 
             # Extract subject context from competency for better image search
             subject_context = input_data.get('competency', '')[:50]
@@ -2415,6 +2446,15 @@ elif st.session_state.stage == 4:
         if additional_materials:
             st.markdown(f"**Additional materials to generate:** {', '.join(additional_materials)}")
 
+        # User feedback text area for additional redesign guidance
+        st.markdown("### ✏️ Additional Feedback (Optional)")
+        user_redesign_feedback = st.text_area(
+            "Add your own feedback or guidance for the redesign:",
+            placeholder="E.g., 'Make the activities more hands-on', 'Add more scaffolding for ELL students', 'Include a real-world example about climate change'...",
+            height=100,
+            key="user_redesign_feedback"
+        )
+
         col1, col2 = st.columns(2)
         with col1:
             if st.button("✅ Proceed Without Changes", use_container_width=True):
@@ -2438,6 +2478,8 @@ elif st.session_state.stage == 4:
                             concern["from_persona"] = fb.get("persona_name", "Unknown")
                             selected_concerns.append(concern)
                 st.session_state.lesson_data["selected_concerns"] = selected_concerns
+                # Store user's additional feedback
+                st.session_state.lesson_data["user_redesign_feedback"] = user_redesign_feedback
                 # Clear feedback to trigger redesign
                 del st.session_state.lesson_data["persona_feedback"]
                 st.session_state.stage = 3
