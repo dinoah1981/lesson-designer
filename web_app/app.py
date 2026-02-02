@@ -52,20 +52,14 @@ st.markdown(f"""
 
     /* Main header styling */
     .main-header {{
-        font-size: 2.5rem;
+        font-size: 1.6rem;
         font-weight: 700;
         color: {DARK_GREEN};
-        margin-bottom: 0;
+        margin-bottom: 0.5rem;
     }}
 
     .brand-highlight {{
         color: {LIGHT_GREEN};
-    }}
-
-    .sub-header {{
-        font-size: 1.1rem;
-        color: #666;
-        margin-bottom: 1rem;
     }}
 
     /* ===== PROGRESS STEPPER (Horizontal) ===== */
@@ -2019,16 +2013,16 @@ with st.sidebar:
 
     st.divider()
 
-    # Process explanation
-    st.markdown(f'<div class="sidebar-title">📍 How It Works</div>', unsafe_allow_html=True)
+    # Process steps
+    st.markdown(f'<div class="sidebar-title">📍 Process</div>', unsafe_allow_html=True)
 
     stages = [
-        ("1", "Define Requirements", "Tell us what you want to teach"),
-        ("2", "Review Knowledge & Skills", "Confirm underlying concepts"),
-        ("3", "AI Designs Lesson", "Claude creates a Marzano-aligned lesson"),
-        ("4", "Persona Review", "4 student perspectives evaluate accessibility"),
-        ("5", "Generate Files", "Create .pptx slides and .docx worksheets"),
-        ("6", "Download", "Get your classroom-ready materials"),
+        ("1", "Define", "Enter competency"),
+        ("2", "Review", "Approve lesson flow"),
+        ("3", "Design", "AI creates lessons"),
+        ("4", "Feedback", "Persona review"),
+        ("5", "Generate", "Create materials"),
+        ("6", "Download", "Get files"),
     ]
 
     for num, title, desc in stages:
@@ -2046,10 +2040,8 @@ with st.sidebar:
         st.markdown(f"""
         <div class="progress-step {style}">
             <span style="margin-right: 0.5rem;">{status}</span>
-            <div>
-                <strong>{title}</strong><br>
-                <span style="font-size: 0.75rem; color: #888;">{desc}</span>
-            </div>
+            <strong>{title}</strong>
+            <span style="font-size: 0.75rem; color: #888; margin-left: 0.25rem;">{desc}</span>
         </div>
         """, unsafe_allow_html=True)
 
@@ -2087,7 +2079,6 @@ with st.sidebar:
 st.markdown(f"""
 <p class="main-header">Lesson <span class="brand-highlight">Designer</span></p>
 """, unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Marzano-aligned lesson planning for every learner</p>', unsafe_allow_html=True)
 
 # Horizontal Progress Stepper
 render_progress_stepper(st.session_state.stage)
