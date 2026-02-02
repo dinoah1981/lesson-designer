@@ -256,8 +256,80 @@ def add_numbered_questions(doc: Document, questions: List[str], with_answer_spac
             add_answer_lines(doc, num_lines)
 
 
-def add_exit_ticket(doc: Document, questions: List[str]) -> None:
-    """Add exit ticket section."""
+def add_content_table(doc: Document, content_table: Dict) -> None:
+    """Add a pre-filled content table with actual data."""
+    headers = content_table.get('headers', [])
+    rows = content_table.get('rows', [])
+
+    if not headers or not rows:
+        return
+
+    num_cols = len(headers)
+    table = doc.add_table(rows=len(rows) + 1, cols=num_cols)
+    table.style = 'Table Grid'
+
+    # Header row
+    header_cells = table.rows[0].cells
+    for i, header in enumerate(headers):
+        header_cells[i].text = str(header)
+        if header_cells[i].paragraphs[0].runs:
+            header_cells[i].paragraphs[0].runs[0].bold = True
+            header_cells[i].paragraphs[0].runs[0].font.size = Pt(10)
+        set_cell_shading(header_cells[i], "D0D0D0")
+
+    # Data rows
+    for row_idx, row_data in enumerate(rows):
+        cells = table.rows[row_idx + 1].cells
+        for col_idx, cell_value in enumerate(row_data[:num_cols]):
+            cells[col_idx].text = str(cell_value)
+            if cells[col_idx].paragraphs[0].runs:
+                cells[col_idx].paragraphs[0].runs[0].font.size = Pt(10)
+
+    doc.add_paragraph()
+
+
+def add_key_facts(doc: Document, facts: List[str]) -> None:
+    """Add a key facts section with bullet points."""
+    for fact in facts:
+        p = doc.add_paragraph()
+        run = p.add_run(f"• {fact}")
+        run.font.size = Pt(10)
+        p.paragraph_format.space_after = Pt(3)
+    doc.add_paragraph()
+
+
+def add_multiple_choice(doc: Document, mc_questions: List[Dict], question_start: int = 1) -> int:
+    """Add multiple choice questions with options. Returns next question number."""
+    q_num = question_start
+    for mc in mc_questions:
+        question = mc.get('question', '')
+        options = mc.get('options', [])
+
+        # Question
+        p = doc.add_paragraph()
+        run = p.add_run(f"{q_num}. {question}")
+        run.font.size = Pt(11)
+        run.bold = True
+        p.paragraph_format.space_after = Pt(3)
+
+        # Options
+        option_letters = ['a', 'b', 'c', 'd']
+        for i, option in enumerate(options[:4]):
+            p = doc.add_paragraph()
+            letter = option_letters[i] if i < len(option_letters) else str(i+1)
+            run = p.add_run(f"    {letter}. {option}")
+            run.font.size = Pt(10)
+            p.paragraph_format.space_after = Pt(2)
+            p.paragraph_format.left_indent = Inches(0.25)
+
+        doc.add_paragraph()
+        q_num += 1
+
+    return q_num
+
+
+def add_exit_ticket(doc: Document, assessment: Dict) -> None:
+    """Add exit ticket section with multiple choice and short answer."""
     # Header with box effect using table
     table = doc.add_table(rows=1, cols=1)
     table.style = 'Table Grid'
@@ -270,7 +342,29 @@ def add_exit_ticket(doc: Document, questions: List[str]) -> None:
 
     doc.add_paragraph()
 
-    add_numbered_questions(doc, questions, with_answer_space=True, num_lines=4)
+    q_num = 1
+
+    # Multiple choice questions (if present)
+    mc_questions = assessment.get('multiple_choice', [])
+    if mc_questions:
+        q_num = add_multiple_choice(doc, mc_questions, q_num)
+
+    # Short answer questions
+    short_answer = assessment.get('short_answer', [])
+    if short_answer:
+        for sa in short_answer:
+            question = sa.get('question', '')
+            p = doc.add_paragraph()
+            run = p.add_run(f"{q_num}. {question}")
+            run.font.size = Pt(11)
+            run.bold = True
+            add_answer_lines(doc, 3)
+            q_num += 1
+
+    # Fallback to old format if no structured questions
+    questions = assessment.get('questions', [])
+    if not mc_questions and not short_answer and questions:
+        add_numbered_questions(doc, questions, with_answer_space=True, num_lines=3)
 
 
 def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
@@ -373,26 +467,30 @@ def generate_worksheet_from_lesson(lesson: Dict, output_path: str) -> bool:
 
         part_num += 1
 
+    # Add key facts section if present
+    key_facts = lesson.get('key_facts', [])
+    if key_facts:
+        add_part_header(doc, part_num, "Key Facts")
+        add_key_facts(doc, key_facts[:8])
+        part_num += 1
+
+    # Add content table if present (filled with actual data)
+    content_table = lesson.get('content_table', {})
+    if content_table.get('headers') and content_table.get('rows'):
+        add_part_header(doc, part_num, "Reference Table")
+        add_content_table(doc, content_table)
+        part_num += 1
+
     # Add vocabulary section if present and not already added
     vocab = lesson.get('vocabulary', [])
-    if vocab and part_num <= 3:  # Only add if we haven't had many parts
+    if vocab and part_num <= 5:  # Only add if we haven't had too many parts
         add_part_header(doc, part_num, "Key Terms")
         add_definition_table(doc, vocab[:6])
         part_num += 1
 
     # Add exit ticket
     assessment = lesson.get('assessment', {})
-    exit_questions = assessment.get('questions', [])
-
-    if not exit_questions:
-        # Default exit ticket questions
-        objective = lesson.get('objective', 'the main concept')
-        exit_questions = [
-            f"What is the most important thing you learned today?",
-            f"What is one question you still have?"
-        ]
-
-    add_exit_ticket(doc, exit_questions[:3])  # Max 3 questions
+    add_exit_ticket(doc, assessment)
 
     # Save document
     doc.save(output_path)

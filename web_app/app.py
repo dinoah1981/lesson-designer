@@ -748,6 +748,26 @@ ENGAGEMENT DESIGN (based on Self-Determination Theory):
 - Make relevance to students' lives explicit
 - Scaffold challenge appropriately (productive struggle, not frustration)
 
+🔴 CRITICAL - CONTENT REQUIREMENTS (DO NOT SKIP):
+The lesson MUST include ACTUAL SUBSTANTIVE CONTENT, not just pedagogical structure:
+
+1. VOCABULARY: Include COMPLETE DEFINITIONS, not placeholders
+   - GOOD: {{"word": "photosynthesis", "definition": "The process by which plants convert sunlight, water, and CO2 into glucose and oxygen"}}
+
+2. KEY FACTS: Include 5-10 specific facts with names, dates, numbers, places, formulas
+   - Example: ["The Civil War lasted from 1861-1865", "Over 620,000 soldiers died"]
+
+3. STUDENT QUESTIONS: Must reference SPECIFIC content from the lesson
+   - GOOD: "Which three religions originated in Southwest Asia?"
+
+4. EXIT TICKET: Include multiple choice questions WITH answer options and correct answer marked
+   - Format: {{"question": "Which...", "options": ["A", "B", "C", "D"], "correct": "B"}}
+
+5. CONTENT TABLES: For comparison topics, include actual data rows
+   - Example: {{"headers": ["Religion", "Origin", "Followers"], "rows": [["Christianity", "Middle East", "2.4B"], ...]}}
+
+6. WORKED EXAMPLES: Include COMPLETE step-by-step solutions, not descriptions
+
 Return a JSON object with this exact structure:
 {{
     "is_sequence": false,
@@ -759,9 +779,21 @@ Return a JSON object with this exact structure:
     "lesson_type": "{input_data['lesson_type']}",
     "objective": "Students will be able to...",
     "essential_question": "Overarching inquiry question that drives the lesson",
+    "key_facts": [
+        "Specific fact 1 with names, dates, or numbers",
+        "Specific fact 2 students will learn",
+        "Specific fact 3 with concrete details"
+    ],
+    "content_table": {{
+        "headers": ["Column1", "Column2", "Column3"],
+        "rows": [
+            ["Actual data", "Real content", "Specific values"],
+            ["More data", "More content", "More values"]
+        ]
+    }},
     "vocabulary": [
-        {{"word": "term1", "definition": "definition1"}},
-        {{"word": "term2", "definition": "definition2"}}
+        {{"word": "term1", "definition": "COMPLETE definition with explanation"}},
+        {{"word": "term2", "definition": "COMPLETE definition with explanation"}}
     ],
     "activities": [
         {{
@@ -828,7 +860,19 @@ Return a JSON object with this exact structure:
     "assessment": {{
         "type": "exit_ticket",
         "description": "Brief description",
-        "questions": ["Question 1", "Question 2"],
+        "multiple_choice": [
+            {{
+                "question": "Content-specific question?",
+                "options": ["Option A", "Option B", "Option C", "Option D"],
+                "correct": "A"
+            }}
+        ],
+        "short_answer": [
+            {{
+                "question": "Open-ended question requiring specific knowledge?",
+                "expected_response": "What a correct answer should include"
+            }}
+        ],
         "success_criteria": "What mastery looks like"
     }}
 }}
@@ -878,6 +922,15 @@ ENGAGEMENT DESIGN (based on Self-Determination Theory):
 - Make relevance to students' lives explicit
 - Scaffold challenge appropriately (productive struggle, not frustration)
 
+🔴 CRITICAL - CONTENT REQUIREMENTS (DO NOT SKIP):
+Each lesson MUST include ACTUAL SUBSTANTIVE CONTENT:
+1. VOCABULARY with COMPLETE definitions (not placeholders)
+2. KEY FACTS: 5-10 specific facts per lesson with names, dates, numbers
+3. CONTENT-SPECIFIC student questions (not generic "what patterns do you notice?")
+4. EXIT TICKETS with multiple choice options and correct answers marked
+5. CONTENT TABLES with actual data when comparing items
+6. WORKED EXAMPLES with complete step-by-step solutions
+
 Return a JSON object with this exact structure:
 {{
     "is_sequence": true,
@@ -897,7 +950,9 @@ Return a JSON object with this exact structure:
             "lesson_type": "introducing",
             "objective": "Lesson 1 specific objective",
             "connection_to_previous": "How this connects to prior learning (null for lesson 1)",
-            "vocabulary": [{{"word": "term1", "definition": "def1"}}],
+            "key_facts": ["Specific fact 1", "Specific fact 2", "Specific fact 3"],
+            "content_table": {{"headers": ["Col1", "Col2"], "rows": [["data", "data"]]}},
+            "vocabulary": [{{"word": "term1", "definition": "COMPLETE definition"}}],
             "activities": [
                 {{
                     "name": "Activity Name",

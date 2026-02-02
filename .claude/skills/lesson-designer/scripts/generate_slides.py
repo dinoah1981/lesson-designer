@@ -584,29 +584,147 @@ def create_vocabulary_slide(prs, slide, vocab):
         y_pos += 1.0
 
 
-def create_exit_ticket_slide(prs, slide, assessment):
-    """Create exit ticket slide with questions."""
-    add_header_bar(prs, slide, "🎫 Exit Ticket")
+def create_key_facts_slide(prs, slide, key_facts):
+    """Create a slide showing key facts students should know."""
+    add_header_bar(prs, slide, "📋 Key Facts")
     add_light_background(prs, slide)
 
-    # Questions content box
     add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(12.333), Inches(5))
 
-    questions = assessment.get('questions', [])
-    q_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.1), Inches(11.7), Inches(4.5))
-    tf = q_box.text_frame
+    facts_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.1), Inches(11.7), Inches(4.5))
+    tf = facts_box.text_frame
     tf.word_wrap = True
 
-    for i, q in enumerate(questions):
+    for i, fact in enumerate(key_facts[:8]):
         if i == 0:
             p = tf.paragraphs[0]
         else:
             p = tf.add_paragraph()
         run = p.add_run()
-        run.text = f"{i+1}. {q}"
-        run.font.size = Pt(22)
+        run.text = f"• {fact}"
+        run.font.size = Pt(18)
         run.font.color.rgb = BODY_CHARCOAL
-        p.space_after = Pt(24)
+        p.space_after = Pt(8)
+
+
+def create_content_table_slide(prs, slide, content_table, title="Reference Data"):
+    """Create a slide with a data table."""
+    add_header_bar(prs, slide, f"📊 {title}")
+    add_light_background(prs, slide)
+
+    headers = content_table.get('headers', [])
+    rows = content_table.get('rows', [])
+
+    if not headers or not rows:
+        return
+
+    # Calculate table dimensions
+    num_cols = len(headers)
+    num_rows = min(len(rows) + 1, 8)  # Header + data rows, max 8 total
+
+    # Create table shape
+    table = slide.shapes.add_table(num_rows, num_cols, Inches(0.5), Inches(1.8), Inches(12.333), Inches(5)).table
+
+    # Style header row
+    for i, header in enumerate(headers):
+        cell = table.cell(0, i)
+        cell.text = str(header)
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = HEADER_BLUE
+        para = cell.text_frame.paragraphs[0]
+        para.font.bold = True
+        para.font.size = Pt(14)
+        para.font.color.rgb = WHITE
+
+    # Fill data rows
+    for row_idx, row_data in enumerate(rows[:num_rows-1]):
+        for col_idx, cell_value in enumerate(row_data[:num_cols]):
+            cell = table.cell(row_idx + 1, col_idx)
+            cell.text = str(cell_value)
+            para = cell.text_frame.paragraphs[0]
+            para.font.size = Pt(12)
+            para.font.color.rgb = BODY_CHARCOAL
+
+
+def create_exit_ticket_slide(prs, slide, assessment):
+    """Create exit ticket slide with multiple choice and short answer questions."""
+    add_header_bar(prs, slide, "🎫 Exit Ticket")
+    add_light_background(prs, slide)
+
+    add_content_box(prs, slide, Inches(0.5), Inches(1.8), Inches(12.333), Inches(5))
+
+    q_box = slide.shapes.add_textbox(Inches(0.8), Inches(2.1), Inches(11.7), Inches(4.5))
+    tf = q_box.text_frame
+    tf.word_wrap = True
+
+    q_num = 1
+    first_para = True
+
+    # Multiple choice questions
+    mc_questions = assessment.get('multiple_choice', [])
+    for mc in mc_questions[:2]:  # Max 2 MC on one slide
+        question = mc.get('question', '')
+        options = mc.get('options', [])
+
+        if first_para:
+            p = tf.paragraphs[0]
+            first_para = False
+        else:
+            p = tf.add_paragraph()
+
+        run = p.add_run()
+        run.text = f"{q_num}. {question}"
+        run.font.size = Pt(18)
+        run.font.bold = True
+        run.font.color.rgb = BODY_CHARCOAL
+        p.space_after = Pt(4)
+
+        # Options
+        option_letters = ['a', 'b', 'c', 'd']
+        for i, option in enumerate(options[:4]):
+            p = tf.add_paragraph()
+            run = p.add_run()
+            letter = option_letters[i] if i < len(option_letters) else str(i+1)
+            run.text = f"    {letter}. {option}"
+            run.font.size = Pt(14)
+            run.font.color.rgb = BODY_CHARCOAL
+            p.space_after = Pt(2)
+
+        q_num += 1
+
+    # Short answer questions
+    short_answer = assessment.get('short_answer', [])
+    for sa in short_answer[:2]:  # Max 2 SA on one slide
+        question = sa.get('question', '')
+
+        if first_para:
+            p = tf.paragraphs[0]
+            first_para = False
+        else:
+            p = tf.add_paragraph()
+
+        run = p.add_run()
+        run.text = f"{q_num}. {question}"
+        run.font.size = Pt(18)
+        run.font.bold = True
+        run.font.color.rgb = BODY_CHARCOAL
+        p.space_after = Pt(12)
+        q_num += 1
+
+    # Fallback to old format
+    questions = assessment.get('questions', [])
+    if not mc_questions and not short_answer and questions:
+        for i, q in enumerate(questions[:3]):
+            if first_para:
+                p = tf.paragraphs[0]
+                first_para = False
+            else:
+                p = tf.add_paragraph()
+            run = p.add_run()
+            run.text = f"{i+1}. {q}"
+            run.font.size = Pt(20)
+            run.font.color.rgb = BODY_CHARCOAL
+            p.space_after = Pt(18)
 
 
 def generate_slides(lesson_path: str, output_path: str) -> bool:
@@ -633,6 +751,24 @@ def generate_slides(lesson_path: str, output_path: str) -> bool:
     slide3 = prs.slides.add_slide(prs.slide_layouts[6])
     create_agenda_slide(prs, slide3, lesson)
 
+    # Key facts slide (if key_facts exists) - show early so students have context
+    key_facts = lesson.get('key_facts', [])
+    if key_facts:
+        slide_facts = prs.slides.add_slide(prs.slide_layouts[6])
+        create_key_facts_slide(prs, slide_facts, key_facts)
+
+    # Content table slide (if content_table exists) - reference data for students
+    content_table = lesson.get('content_table', {})
+    if content_table.get('headers') and content_table.get('rows'):
+        slide_table = prs.slides.add_slide(prs.slide_layouts[6])
+        create_content_table_slide(prs, slide_table, content_table)
+
+    # Vocabulary slide (if vocabulary exists)
+    vocab = lesson.get('vocabulary', [])
+    if vocab:
+        slide_vocab = prs.slides.add_slide(prs.slide_layouts[6])
+        create_vocabulary_slide(prs, slide_vocab, vocab)
+
     # Activity slides
     for activity in lesson['activities']:
         slide = prs.slides.add_slide(prs.slide_layouts[6])
@@ -641,15 +777,9 @@ def generate_slides(lesson_path: str, output_path: str) -> bool:
         else:
             create_activity_slide(prs, slide, activity)
 
-    # Vocabulary slide (if vocabulary exists)
-    vocab = lesson.get('vocabulary', [])
-    if vocab:
-        slide_vocab = prs.slides.add_slide(prs.slide_layouts[6])
-        create_vocabulary_slide(prs, slide_vocab, vocab)
-
     # Exit ticket slide
     assessment = lesson.get('assessment', {})
-    if assessment.get('questions'):
+    if assessment.get('questions') or assessment.get('multiple_choice') or assessment.get('short_answer'):
         slide_exit = prs.slides.add_slide(prs.slide_layouts[6])
         create_exit_ticket_slide(prs, slide_exit, assessment)
 
