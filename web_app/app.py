@@ -748,25 +748,19 @@ ENGAGEMENT DESIGN (based on Self-Determination Theory):
 - Make relevance to students' lives explicit
 - Scaffold challenge appropriately (productive struggle, not frustration)
 
-🔴 CRITICAL - CONTENT REQUIREMENTS (DO NOT SKIP):
-The lesson MUST include ACTUAL SUBSTANTIVE CONTENT, not just pedagogical structure:
+🔴 CRITICAL - COMPLETENESS REQUIREMENT:
+Design a creative, engaging lesson - but whatever you design, make it COMPLETE and TEACHER-READY:
 
-1. VOCABULARY: Include COMPLETE DEFINITIONS, not placeholders
-   - GOOD: {{"word": "photosynthesis", "definition": "The process by which plants convert sunlight, water, and CO2 into glucose and oxygen"}}
+- If you include vocabulary, provide FULL DEFINITIONS (not "definition here")
+- If you include a reading or text, WRITE THE ACTUAL TEXT
+- If you include data or comparisons, FILL IN THE ACTUAL DATA
+- If you include questions, make them CONTENT-SPECIFIC (not generic "what patterns do you notice?")
+- If you include an assessment, provide REAL QUESTIONS with answer keys
+- If you include a worked example, show the COMPLETE SOLUTION
 
-2. KEY FACTS: Include 5-10 specific facts with names, dates, numbers, places, formulas
-   - Example: ["The Civil War lasted from 1861-1865", "Over 620,000 soldiers died"]
+The test: Could a substitute teacher pick this up and run the lesson without needing to create any content themselves?
 
-3. STUDENT QUESTIONS: Must reference SPECIFIC content from the lesson
-   - GOOD: "Which three religions originated in Southwest Asia?"
-
-4. EXIT TICKET: Include multiple choice questions WITH answer options and correct answer marked
-   - Format: {{"question": "Which...", "options": ["A", "B", "C", "D"], "correct": "B"}}
-
-5. CONTENT TABLES: For comparison topics, include actual data rows
-   - Example: {{"headers": ["Religion", "Origin", "Followers"], "rows": [["Christianity", "Middle East", "2.4B"], ...]}}
-
-6. WORKED EXAMPLES: Include COMPLETE step-by-step solutions, not descriptions
+BE CREATIVE with lesson structure - not every lesson needs the same format. Consider: Socratic seminars, simulations, debates, project-based learning, gallery walks, jigsaw activities, case studies, labs, stations, games, creative projects, etc.
 
 Return a JSON object with this exact structure:
 {{
@@ -779,18 +773,6 @@ Return a JSON object with this exact structure:
     "lesson_type": "{input_data['lesson_type']}",
     "objective": "Students will be able to...",
     "essential_question": "Overarching inquiry question that drives the lesson",
-    "key_facts": [
-        "Specific fact 1 with names, dates, or numbers",
-        "Specific fact 2 students will learn",
-        "Specific fact 3 with concrete details"
-    ],
-    "content_table": {{
-        "headers": ["Column1", "Column2", "Column3"],
-        "rows": [
-            ["Actual data", "Real content", "Specific values"],
-            ["More data", "More content", "More values"]
-        ]
-    }},
     "vocabulary": [
         {{"word": "term1", "definition": "COMPLETE definition with explanation"}},
         {{"word": "term2", "definition": "COMPLETE definition with explanation"}}
@@ -858,21 +840,10 @@ Return a JSON object with this exact structure:
         "closure_synthesis": "How to tie everything together at the end"
     }},
     "assessment": {{
-        "type": "exit_ticket",
-        "description": "Brief description",
-        "multiple_choice": [
-            {{
-                "question": "Content-specific question?",
-                "options": ["Option A", "Option B", "Option C", "Option D"],
-                "correct": "A"
-            }}
-        ],
-        "short_answer": [
-            {{
-                "question": "Open-ended question requiring specific knowledge?",
-                "expected_response": "What a correct answer should include"
-            }}
-        ],
+        "type": "exit_ticket|performance_task|discussion|portfolio|peer_review|self_assessment|project|presentation|other",
+        "description": "What students do for assessment",
+        "questions": ["Actual question 1 with content-specific details", "Actual question 2"],
+        "answer_key": "Correct answers or rubric criteria",
         "success_criteria": "What mastery looks like"
     }}
 }}
@@ -922,14 +893,17 @@ ENGAGEMENT DESIGN (based on Self-Determination Theory):
 - Make relevance to students' lives explicit
 - Scaffold challenge appropriately (productive struggle, not frustration)
 
-🔴 CRITICAL - CONTENT REQUIREMENTS (DO NOT SKIP):
-Each lesson MUST include ACTUAL SUBSTANTIVE CONTENT:
-1. VOCABULARY with COMPLETE definitions (not placeholders)
-2. KEY FACTS: 5-10 specific facts per lesson with names, dates, numbers
-3. CONTENT-SPECIFIC student questions (not generic "what patterns do you notice?")
-4. EXIT TICKETS with multiple choice options and correct answers marked
-5. CONTENT TABLES with actual data when comparing items
-6. WORKED EXAMPLES with complete step-by-step solutions
+🔴 CRITICAL - COMPLETENESS REQUIREMENT:
+Design creative, engaging lessons - but whatever you design, make it COMPLETE and TEACHER-READY:
+
+- If you include vocabulary, provide FULL DEFINITIONS (not placeholders)
+- If you include readings/texts, WRITE THE ACTUAL TEXT
+- If you include data or comparisons, FILL IN THE ACTUAL DATA
+- If you include questions, make them CONTENT-SPECIFIC
+- If you include assessments, provide REAL QUESTIONS with answer keys
+- If you include worked examples, show COMPLETE SOLUTIONS
+
+BE CREATIVE - vary lesson structures across the sequence. Consider: Socratic seminars, simulations, debates, project-based learning, gallery walks, jigsaw activities, case studies, labs, stations, games, creative projects, etc.
 
 Return a JSON object with this exact structure:
 {{
@@ -950,8 +924,6 @@ Return a JSON object with this exact structure:
             "lesson_type": "introducing",
             "objective": "Lesson 1 specific objective",
             "connection_to_previous": "How this connects to prior learning (null for lesson 1)",
-            "key_facts": ["Specific fact 1", "Specific fact 2", "Specific fact 3"],
-            "content_table": {{"headers": ["Col1", "Col2"], "rows": [["data", "data"]]}},
             "vocabulary": [{{"word": "term1", "definition": "COMPLETE definition"}}],
             "activities": [
                 {{
