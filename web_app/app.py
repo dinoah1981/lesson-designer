@@ -2474,29 +2474,96 @@ elif st.session_state.stage == 4:
         status = "✅ Pass" if cognitive_percent >= 40 else "⚠️ Low"
         st.metric("Rigor", status)
 
-    # COLLAPSIBLE AGENDA VIEW
+    # COLLAPSIBLE AGENDA VIEW - Activity-level expansion
     st.markdown("### 📋 Lesson Agenda")
-    st.markdown('<p style="color: #666; font-size: 0.9rem;">Click any lesson to see full details.</p>', unsafe_allow_html=True)
+    st.markdown('<p style="color: #666; font-size: 0.9rem;">Click any activity to expand details.</p>', unsafe_allow_html=True)
 
     if is_sequence:
         # Show sequence overview
         st.markdown(format_sequence_overview_compact(lesson_or_sequence), unsafe_allow_html=True)
 
-        # Show each lesson as collapsible
+        # Show each lesson with expandable activities
         for lesson in lesson_or_sequence.get("lessons", []):
             lesson_num = lesson.get('lesson_number', 1)
-            lesson_title = lesson.get('title', f'Lesson {lesson_num}')
-            lesson_type = lesson.get('lesson_type', 'introducing').replace('_', ' ').title()
+            activities = lesson.get('activities', [])
 
-            # Compact agenda as expander header content
-            with st.expander(f"**Lesson {lesson_num}:** {lesson_title} ({lesson_type})", expanded=False):
-                st.markdown(format_single_lesson_html(lesson, lesson_num), unsafe_allow_html=True)
+            # Build compact activity summary
+            activity_summary = ", ".join([
+                f"{act.get('name', 'Activity')} ({act.get('duration', 0)})"
+                for act in activities
+            ])
+
+            # Lesson header with activity summary
+            st.markdown(f"""
+            <div style="background: #f8faf8; border-left: 4px solid {LIGHT_GREEN}; padding: 0.5rem 1rem; margin: 0.75rem 0 0.25rem 0; border-radius: 0 8px 8px 0;">
+                <strong style="color: {DARK_GREEN};">Lesson {lesson_num}:</strong>
+                <span style="color: #555; font-size: 0.9rem;">{activity_summary}</span>
+            </div>
+            """, unsafe_allow_html=True)
+
+            # Each activity as expandable
+            for act in activities:
+                act_name = act.get('name', 'Activity')
+                act_duration = act.get('duration', 0)
+                with st.expander(f"{act_name} ({act_duration} min)", expanded=False):
+                    # Activity details
+                    st.markdown(f"**Type:** {act.get('task_type', 'N/A').replace('_', ' ').title()}")
+                    st.markdown(f"**Grouping:** {act.get('grouping', 'N/A').replace('_', ' ').title()}")
+                    if act.get('student_directions'):
+                        st.markdown(f"**Directions:** {act.get('student_directions')}")
+                    if act.get('student_questions'):
+                        st.markdown("**Questions:**")
+                        for q in act.get('student_questions', []):
+                            st.markdown(f"- {q}")
+                    if act.get('instructions'):
+                        st.markdown("**Teacher Instructions:**")
+                        for instr in act.get('instructions', []):
+                            st.markdown(f"- {instr}")
+                    if act.get('differentiation'):
+                        diff = act.get('differentiation', {})
+                        if diff.get('support'):
+                            st.markdown(f"**Support:** {diff.get('support')}")
+                        if diff.get('extension'):
+                            st.markdown(f"**Extension:** {diff.get('extension')}")
     else:
-        # Single lesson - show compact agenda then expandable detail
-        st.markdown(format_compact_agenda(lesson_or_sequence), unsafe_allow_html=True)
+        # Single lesson with expandable activities
+        activities = lesson_or_sequence.get('activities', [])
 
-        with st.expander("📖 View Full Lesson Details", expanded=False):
-            st.markdown(format_single_lesson_html(lesson_or_sequence), unsafe_allow_html=True)
+        # Compact activity summary
+        activity_summary = ", ".join([
+            f"{act.get('name', 'Activity')} ({act.get('duration', 0)})"
+            for act in activities
+        ])
+
+        st.markdown(f"""
+        <div style="background: #f8faf8; border-left: 4px solid {LIGHT_GREEN}; padding: 0.5rem 1rem; margin: 0.5rem 0; border-radius: 0 8px 8px 0;">
+            <span style="color: #555; font-size: 0.9rem;">{activity_summary}</span>
+        </div>
+        """, unsafe_allow_html=True)
+
+        # Each activity as expandable
+        for act in activities:
+            act_name = act.get('name', 'Activity')
+            act_duration = act.get('duration', 0)
+            with st.expander(f"{act_name} ({act_duration} min)", expanded=False):
+                st.markdown(f"**Type:** {act.get('task_type', 'N/A').replace('_', ' ').title()}")
+                st.markdown(f"**Grouping:** {act.get('grouping', 'N/A').replace('_', ' ').title()}")
+                if act.get('student_directions'):
+                    st.markdown(f"**Directions:** {act.get('student_directions')}")
+                if act.get('student_questions'):
+                    st.markdown("**Questions:**")
+                    for q in act.get('student_questions', []):
+                        st.markdown(f"- {q}")
+                if act.get('instructions'):
+                    st.markdown("**Teacher Instructions:**")
+                    for instr in act.get('instructions', []):
+                        st.markdown(f"- {instr}")
+                if act.get('differentiation'):
+                    diff = act.get('differentiation', {})
+                    if diff.get('support'):
+                        st.markdown(f"**Support:** {diff.get('support')}")
+                    if diff.get('extension'):
+                        st.markdown(f"**Extension:** {diff.get('extension')}")
 
     st.divider()
 
