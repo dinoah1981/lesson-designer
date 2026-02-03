@@ -17,11 +17,12 @@ import uuid
 SCRIPTS_DIR = Path(__file__).parent.parent / ".claude" / "skills" / "lesson-designer" / "scripts"
 sys.path.insert(0, str(SCRIPTS_DIR))
 
-# Import lesson designer scripts
+# Import lesson designer scripts (keeping parse_competency and validate_marzano)
 from parse_competency import generate_session_id, get_sessions_dir
 from validate_marzano import validate_lesson
-from generate_worksheet import generate_worksheet, generate_worksheet_from_lesson
-from generate_slides import generate_slides
+
+# Import new Claude-direct material generation
+from claude_materials import generate_all_materials
 
 # Import docx for text-to-word conversion
 from docx import Document
@@ -2706,13 +2707,22 @@ elif st.session_state.stage == 4:
                 st.rerun()
 
 
-# Stage 5: Generate Materials
+# Stage 5: Generate Materials (Claude-Direct Approach)
 elif st.session_state.stage == 5:
-    st.markdown('<div class="stage-header"><span class="stage-header-icon">⚙️</span> Generating Materials</div>', unsafe_allow_html=True)
+    st.markdown('<div class="stage-header"><span class="stage-header-icon">⚙️</span> Generating Materials with AI</div>', unsafe_allow_html=True)
 
     lesson_or_sequence = st.session_state.lesson_data["lesson"]
     is_sequence = lesson_or_sequence.get('is_sequence', False)
     temp_dir = Path(tempfile.mkdtemp())
+
+    # Get persona feedback and selected concerns
+    persona_feedback = st.session_state.lesson_data.get("persona_feedback", [])
+    selected_concerns = st.session_state.lesson_data.get("selected_concerns", [])
+    generate_modified = st.session_state.lesson_data.get("generate_modified", False)
+    generate_extension = st.session_state.lesson_data.get("generate_extension", False)
+
+    # Get Claude client
+    client = get_claude_client()
 
     if is_sequence:
         # Generate materials for each lesson in the sequence
@@ -2723,98 +2733,73 @@ elif st.session_state.stage == 5:
         for i, lesson in enumerate(lessons):
             lesson_num = lesson.get('lesson_number', i + 1)
 
-            with st.spinner(f"📊 Generating materials for Lesson {lesson_num} of {len(lessons)}..."):
+            with st.spinner(f"🤖 Claude is generating materials for Lesson {lesson_num} of {len(lessons)}..."):
                 try:
-                    # Save individual lesson JSON
-                    lesson_path = temp_dir / f"lesson_{lesson_num}.json"
                     # Add required fields from sequence
                     lesson_with_meta = lesson.copy()
                     lesson_with_meta['grade_level'] = lesson_or_sequence.get('grade_level')
                     lesson_with_meta['duration'] = lesson_or_sequence.get('duration_per_lesson')
 
-                    with open(lesson_path, 'w', encoding='utf-8') as f:
-                        json.dump(lesson_with_meta, f, indent=2)
+                    # Create output directory for this lesson
+                    lesson_dir = temp_dir / f"lesson_{lesson_num}"
+                    lesson_dir.mkdir(exist_ok=True)
 
-                    # Generate slides
-                    slides_path = temp_dir / f"lesson_{lesson_num}_slides.pptx"
-                    generate_slides(str(lesson_path), str(slides_path))
-
-                    # Generate worksheet
-                    worksheet_path = temp_dir / f"lesson_{lesson_num}_worksheet.docx"
-                    template_path = Path(__file__).parent.parent / ".claude" / "skills" / "lesson-designer" / "templates" / "student_worksheet.docx"
-                    if template_path.exists():
-                        generate_worksheet(str(lesson_path), str(template_path), str(worksheet_path))
-                    else:
-                        generate_worksheet(str(lesson_path), None, str(worksheet_path))
+                    # Generate all materials using Claude-direct approach
+                    result = generate_all_materials(
+                        client=client,
+                        lesson=lesson_with_meta,
+                        output_dir=str(lesson_dir),
+                        persona_feedback=persona_feedback,
+                        selected_concerns=selected_concerns,
+                        generate_modified=generate_modified and i == 0,  # Only generate differentiated for first lesson
+                        generate_extension=generate_extension and i == 0
+                    )
 
                     st.session_state.lesson_data["sequence_materials"].append({
                         "lesson_number": lesson_num,
                         "title": lesson.get('title', f'Lesson {lesson_num}'),
-                        "slides_path": str(slides_path),
-                        "worksheet_path": str(worksheet_path)
+                        "slides_path": result.get('slides_path'),
+                        "worksheet_path": result.get('worksheet_path'),
+                        "supplementary_paths": result.get('supplementary_paths', [])
                     })
 
                 except Exception as e:
                     st.error(f"Error generating materials for Lesson {lesson_num}: {e}")
+                    import traceback
+                    st.code(traceback.format_exc())
 
             progress.progress((i + 1) / len(lessons))
 
     else:
         # Single lesson generation
-        with st.spinner("📊 Generating PowerPoint slides..."):
+        with st.spinner("🤖 Claude is generating your lesson materials (slides, worksheet, and supporting materials)..."):
             try:
-                lesson_path = temp_dir / "lesson.json"
+                # Generate all materials using Claude-direct approach
+                result = generate_all_materials(
+                    client=client,
+                    lesson=lesson_or_sequence,
+                    output_dir=str(temp_dir),
+                    persona_feedback=persona_feedback,
+                    selected_concerns=selected_concerns,
+                    generate_modified=generate_modified,
+                    generate_extension=generate_extension
+                )
 
-                with open(lesson_path, 'w', encoding='utf-8') as f:
-                    json.dump(lesson_or_sequence, f, indent=2)
+                # Store paths
+                st.session_state.lesson_data["slides_path"] = result.get('slides_path')
+                st.session_state.lesson_data["worksheet_path"] = result.get('worksheet_path')
+                st.session_state.lesson_data["supplementary_paths"] = result.get('supplementary_paths', [])
 
-                slides_path = temp_dir / "slides.pptx"
-                generate_slides(str(lesson_path), str(slides_path))
-                st.session_state.lesson_data["slides_path"] = str(slides_path)
+                if result.get('modified_worksheet_path'):
+                    st.session_state.lesson_data["modified_worksheet_path"] = result['modified_worksheet_path']
+
+                if result.get('extension_worksheet_path'):
+                    st.session_state.lesson_data["extension_worksheet_path"] = result['extension_worksheet_path']
 
             except Exception as e:
-                st.error(f"Error generating slides: {e}")
-
-        with st.spinner("📝 Generating student worksheet..."):
-            try:
-                worksheet_path = temp_dir / "worksheet.docx"
-                template_path = Path(__file__).parent.parent / ".claude" / "skills" / "lesson-designer" / "templates" / "student_worksheet.docx"
-
-                if template_path.exists():
-                    generate_worksheet(str(lesson_path), str(template_path), str(worksheet_path))
-                else:
-                    generate_worksheet(str(lesson_path), None, str(worksheet_path))
-
-                st.session_state.lesson_data["worksheet_path"] = str(worksheet_path)
-
-            except Exception as e:
-                st.error(f"Error generating worksheet: {e}")
-
-    # Generate modified worksheet for struggling learners if selected (for single lessons or entire sequence)
-    if st.session_state.lesson_data.get("generate_modified", False):
-        alex_concerns = st.session_state.lesson_data.get("alex_concerns", [])
-        if alex_concerns:
-            with st.spinner("📝 Generating modified materials for struggling learners..."):
-                try:
-                    modified_lesson = generate_modified_worksheet(lesson_or_sequence, alex_concerns)
-                    modified_path = temp_dir / "worksheet_modified.docx"
-                    generate_worksheet_from_lesson(modified_lesson, str(modified_path))
-                    st.session_state.lesson_data["modified_worksheet_path"] = str(modified_path)
-                except Exception as e:
-                    st.error(f"Error generating modified worksheet: {e}")
-
-    # Generate extension worksheet for advanced learners if selected
-    if st.session_state.lesson_data.get("generate_extension", False):
-        marcus_concerns = st.session_state.lesson_data.get("marcus_concerns", [])
-        if marcus_concerns:
-            with st.spinner("🚀 Generating extension materials for advanced learners..."):
-                try:
-                    extension_lesson = generate_extension_worksheet(lesson_or_sequence, marcus_concerns)
-                    extension_path = temp_dir / "worksheet_extension.docx"
-                    generate_worksheet_from_lesson(extension_lesson, str(extension_path))
-                    st.session_state.lesson_data["extension_worksheet_path"] = str(extension_path)
-                except Exception as e:
-                    st.error(f"Error generating extension worksheet: {e}")
+                st.error(f"Error generating materials: {e}")
+                import traceback
+                st.code(traceback.format_exc())
 
     st.session_state.stage = 6
     st.rerun()
@@ -2919,6 +2904,31 @@ elif st.session_state.stage == 6:
                 st.caption("Formatted with answer space for students")
             else:
                 st.warning("Worksheet not available")
+
+    # Supplementary materials section (station cards, data sheets, etc.)
+    supplementary_paths = st.session_state.lesson_data.get("supplementary_paths", [])
+    if supplementary_paths:
+        st.divider()
+        st.markdown("### 📂 Supporting Materials")
+        st.caption("Activity-specific materials generated based on your lesson design")
+
+        supp_cols = st.columns(min(len(supplementary_paths), 3))
+        for idx, supp_path in enumerate(supplementary_paths):
+            if supp_path and Path(supp_path).exists():
+                col = supp_cols[idx % len(supp_cols)]
+                filename = Path(supp_path).name
+                display_name = filename.replace('_', ' ').replace('.docx', '').title()
+
+                with col:
+                    with open(supp_path, "rb") as f:
+                        st.download_button(
+                            label=f"📄 {display_name}",
+                            data=f.read(),
+                            file_name=f"lesson_{st.session_state.session_id}_{filename}",
+                            mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                            use_container_width=True,
+                            key=f"supp_{idx}"
+                        )
 
     # Additional differentiated materials section
     modified_path = st.session_state.lesson_data.get("modified_worksheet_path")
