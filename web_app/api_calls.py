@@ -116,7 +116,7 @@ Return ONLY the JSON object."""
 
 def generate_lesson_plan(
     competency: str,
-    daily_objective: str,
+    daily_objectives: List[str],
     lesson_type: str,
     grade_level: str,
     duration: int,
@@ -152,13 +152,22 @@ def generate_lesson_plan(
     if additional_guidance:
         guidance_section = f"\n\nADDITIONAL TEACHER GUIDANCE:\n{additional_guidance}\n"
 
+    # Format objectives — single or multi-lesson
+    if num_lessons == 1:
+        objectives_text = f"DAILY OBJECTIVE: {daily_objectives[0]}"
+        exit_ticket_line = f'5. Exit ticket that directly assesses the DAILY OBJECTIVE: "{daily_objectives[0]}"'
+    else:
+        obj_lines = "\n".join(f"  Lesson {i+1}: {obj}" for i, obj in enumerate(daily_objectives[:num_lessons]))
+        objectives_text = f"LESSON OBJECTIVES:\n{obj_lines}"
+        exit_ticket_line = "5. Each lesson's exit ticket directly assesses THAT LESSON'S specific daily objective"
+
     prompt = f"""Design a detailed lesson plan for the following:
 
 COMPETENCY: {competency}
-DAILY OBJECTIVE: {daily_objective}
+{objectives_text}
 LESSON TYPE: {lesson_type} — {lt['description']}
 GRADE LEVEL: {grade_level}
-DURATION: {duration} minutes
+DURATION: {duration} minutes per lesson
 NUMBER OF LESSONS IN SEQUENCE: {num_lessons}
 
 CONFIRMED KNOWLEDGE TO BUILD:
@@ -168,27 +177,27 @@ CONFIRMED SKILLS TO DEVELOP:
 {skills_text}
 {doc_section}{guidance_section}
 
-LESSON TYPE STRUCTURE — Follow this structure for a {lesson_type} lesson:
+LESSON TYPE STRUCTURE — Follow this structure for each {lesson_type} lesson:
 {structure_text}
 
 {lt['prompt_guidance']}
 
 {MARZANO_SUMMARY}
 
-Create a complete, detailed lesson plan with:
+{"Create a complete, detailed lesson plan" if num_lessons == 1 else f"Create {num_lessons} complete, detailed lesson plans (one per lesson in the sequence). Each lesson should have its own objective and build on the previous lesson."} with:
 1. Each segment named, timed, and described with SPECIFIC content (not vague descriptions)
 2. Concrete discussion prompts (the actual questions to ask, not "ask questions about X")
 3. Specific activity instructions (what students do step by step)
 4. Materials referenced by name (worksheet, station cards, data sheet, etc.)
-5. Exit ticket that directly assesses the DAILY OBJECTIVE: "{daily_objective}"
+{exit_ticket_line}
 6. Vocabulary with student-friendly definitions
 7. Teacher notes for each segment (what to watch for, common misconceptions, how to scaffold)
 
-Format the plan as a readable document with clear headers and sections. Be specific and detailed — this plan will be used to generate all lesson materials."""
+{"Format the plan as a readable document with clear headers and sections." if num_lessons == 1 else "Format EACH lesson plan under its own top-level header: '# Lesson 1', '# Lesson 2', etc. Use ## subheaders within each lesson for segments."} Be specific and detailed — this plan will be used to generate all lesson materials."""
 
     response = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=4000,
+        max_tokens=4000 * num_lessons,
         system=LESSON_PLAN_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -198,7 +207,7 @@ Format the plan as a readable document with clear headers and sections. Be speci
 
 # ─── 3. Persona Feedback ────────────────────────────────────────────────────────
 
-def get_persona_feedback(lesson_plan: str, competency: str, daily_objective: str, grade_level: str) -> dict:
+def get_persona_feedback(lesson_plan: str, competency: str, daily_objectives: List[str], grade_level: str) -> dict:
     """
     Send the lesson plan to be evaluated by all 4 personas in a single call.
     Returns structured feedback: {"alex": {...}, "jordan": {...}, "maya": {...}, "marcus": {...}}.
@@ -217,10 +226,17 @@ EVALUATION LENS:
 ---
 """
 
+    # Format objectives
+    if len(daily_objectives) == 1:
+        obj_text = f"DAILY OBJECTIVE: {daily_objectives[0]}"
+    else:
+        obj_lines = "\n".join(f"  Lesson {i+1}: {obj}" for i, obj in enumerate(daily_objectives))
+        obj_text = f"LESSON OBJECTIVES:\n{obj_lines}"
+
     prompt = f"""Evaluate this lesson plan from the perspective of 4 different student personas.
 
 COMPETENCY: {competency}
-DAILY OBJECTIVE: {daily_objective}
+{obj_text}
 GRADE LEVEL: {grade_level}
 
 LESSON PLAN:
@@ -326,7 +342,7 @@ Return ONLY the bullet points, no other text."""
 
 def generate_lesson_content(
     competency: str,
-    daily_objective: str,
+    daily_objectives: List[str],
     lesson_type: str,
     grade_level: str,
     duration: int,
@@ -365,10 +381,17 @@ def generate_lesson_content(
 
     system = CONTENT_GENERATION_SYSTEM_PROMPT.format(discovery_principle=DISCOVERY_PRINCIPLE)
 
+    # Format objectives
+    if len(daily_objectives) == 1:
+        obj_text = f"DAILY OBJECTIVE: {daily_objectives[0]}"
+    else:
+        obj_lines = "\n".join(f"  Lesson {i+1}: {obj}" for i, obj in enumerate(daily_objectives))
+        obj_text = f"LESSON OBJECTIVES:\n{obj_lines}"
+
     prompt = f"""Generate complete, structured lesson content for the following lesson.
 
 COMPETENCY: {competency}
-DAILY OBJECTIVE: {daily_objective}
+{obj_text}
 LESSON TYPE: {lesson_type}
 GRADE LEVEL: {grade_level}
 DURATION: {duration} minutes
@@ -390,11 +413,13 @@ TEACHER-APPROVED PROMPT ADDITIONS (incorporate all of these):
 
 {MARZANO_SUMMARY}
 {diff_section}
-Generate ALL content blocks now. Be thorough — every section should be complete and classroom-ready. The content you generate will be used directly to create slides, worksheets, and supplementary materials."""
+Generate ALL content blocks now. Be thorough — every section should be complete and classroom-ready. The content you generate will be used directly to create slides, worksheets, and supplementary materials.
+{"" if len(daily_objectives) == 1 else f"IMPORTANT: Generate content for ALL {len(daily_objectives)} lessons. Structure your output with a top-level '# Lesson 1', '# Lesson 2', etc. header for each lesson, with the ## content block headers nested within each lesson."}"""
 
+    num = len(daily_objectives)
     response = client.messages.create(
         model=CLAUDE_MODEL,
-        max_tokens=8000,
+        max_tokens=8000 * num,
         system=system,
         messages=[{"role": "user", "content": prompt}],
     )

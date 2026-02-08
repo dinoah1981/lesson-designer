@@ -183,6 +183,18 @@ st.markdown(f"""
         background: linear-gradient(135deg, #1976d2 0%, #2196f3 100%);
     }}
 
+    /* Compact plan/content text */
+    .plan-text {{
+        font-size: 0.88rem;
+        line-height: 1.45;
+    }}
+    .plan-text h1 {{ font-size: 1.2rem; margin: 0.8rem 0 0.4rem 0; color: {DARK_GREEN}; }}
+    .plan-text h2 {{ font-size: 1.05rem; margin: 0.7rem 0 0.3rem 0; color: {DARK_GREEN}; }}
+    .plan-text h3 {{ font-size: 0.95rem; margin: 0.5rem 0 0.2rem 0; }}
+    .plan-text p {{ margin: 0.3rem 0; }}
+    .plan-text ul, .plan-text ol {{ margin: 0.2rem 0 0.2rem 1.2rem; padding: 0; }}
+    .plan-text li {{ margin: 0.15rem 0; }}
+
     /* Hide Streamlit branding */
     #MainMenu {{visibility: hidden;}}
     footer {{visibility: hidden;}}
@@ -199,7 +211,7 @@ def init_state():
         "phase": 1,
         # Phase 1 inputs
         "competency": "",
-        "daily_objective": "",
+        "daily_objectives": [""],
         "lesson_type": list(LESSON_TYPES.keys())[0],
         "grade_level": "9",
         "duration": 50,
@@ -317,30 +329,6 @@ def render_phase_1():
 
     col1, col2 = st.columns([3, 2])
 
-    with col1:
-        competency = st.text_area(
-            "Competency",
-            value=st.session_state.competency,
-            placeholder="e.g., Students will analyze primary sources to evaluate historical claims about the causes of World War I",
-            height=100,
-        )
-        daily_objective = st.text_input(
-            "Daily Objective",
-            value=st.session_state.daily_objective,
-            placeholder="e.g., Students will identify bias in two primary sources and explain how bias affects historical interpretation",
-        )
-        additional_guidance = st.text_area(
-            "Additional Guidance (optional)",
-            value=st.session_state.additional_guidance,
-            placeholder="e.g., Students have already learned about WWI's timeline. They struggle with distinguishing fact from opinion.",
-            height=80,
-        )
-        uploaded_file = st.file_uploader(
-            "Upload Supporting Document (optional)",
-            type=["docx", "pdf", "txt"],
-            help="Upload a .docx, .pdf, or .txt file to include as context for lesson generation.",
-        )
-
     with col2:
         lesson_type = st.selectbox(
             "Lesson Type",
@@ -358,18 +346,61 @@ def render_phase_1():
         duration = st.slider("Duration (minutes)", 30, 90, st.session_state.duration, step=5)
         num_lessons = st.number_input("Number of Lessons", 1, 5, st.session_state.num_lessons)
 
+    with col1:
+        competency = st.text_area(
+            "Competency",
+            value=st.session_state.competency,
+            placeholder="e.g., Students will analyze primary sources to evaluate historical claims about the causes of World War I",
+            height=100,
+        )
+
+        # Dynamic daily objective fields — one per lesson
+        n = int(num_lessons)
+        # Ensure session list is the right length
+        while len(st.session_state.daily_objectives) < n:
+            st.session_state.daily_objectives.append("")
+        daily_objectives = []
+        for i in range(n):
+            label = "Daily Objective" if n == 1 else f"Lesson {i + 1} — Daily Objective"
+            val = st.session_state.daily_objectives[i] if i < len(st.session_state.daily_objectives) else ""
+            obj = st.text_input(
+                label,
+                value=val,
+                placeholder="e.g., Students will identify bias in two primary sources and explain how bias affects historical interpretation",
+                key=f"obj_{i}",
+            )
+            daily_objectives.append(obj)
+
+        additional_guidance = st.text_area(
+            "Additional Guidance (optional)",
+            value=st.session_state.additional_guidance,
+            placeholder="e.g., Students have already learned about WWI's timeline. They struggle with distinguishing fact from opinion.",
+            height=80,
+        )
+        uploaded_file = st.file_uploader(
+            "Upload Supporting Document (optional)",
+            type=["docx", "pdf", "txt"],
+            help="Upload a .docx, .pdf, or .txt file to include as context for lesson generation.",
+        )
+
     # Analyze button
     if st.button("Analyze Competency", type="primary", use_container_width=True):
         if not competency.strip():
             st.error("Please enter a competency statement.")
             return
-        if not daily_objective.strip():
-            st.error("Please enter a daily objective.")
+        # Validate that all objectives have text
+        empty_objs = [i for i, o in enumerate(daily_objectives) if not o.strip()]
+        if empty_objs:
+            if n == 1:
+                st.error("Please enter a daily objective.")
+            else:
+                labels = ", ".join(str(i + 1) for i in empty_objs)
+                st.error(f"Please enter a daily objective for lesson(s): {labels}")
             return
 
         # Store inputs
         st.session_state.competency = competency
-        st.session_state.daily_objective = daily_objective
+        st.session_state.daily_objectives = daily_objectives
         st.session_state.lesson_type = lesson_type
         st.session_state.grade_level = grade_level
         st.session_state.duration = duration
@@ -441,7 +472,7 @@ def render_phase_2():
             try:
                 plan = generate_lesson_plan(
                     competency=st.session_state.competency,
-                    daily_objective=st.session_state.daily_objective,
+                    daily_objectives=st.session_state.daily_objectives,
                     lesson_type=st.session_state.lesson_type,
                     grade_level=st.session_state.grade_level,
                     duration=st.session_state.duration,
@@ -460,9 +491,21 @@ def render_phase_2():
         st.rerun()
 
     # Display the lesson plan
-    st.markdown('<div class="info-box">Review the proposed lesson plan below. When you\'re satisfied, approve it to get persona feedback.</div>', unsafe_allow_html=True)
-
-    st.markdown(st.session_state.lesson_plan)
+    num = st.session_state.num_lessons
+    if num == 1:
+        st.markdown('<div class="info-box">Review the proposed lesson plan below. When you\'re satisfied, approve it to get persona feedback.</div>', unsafe_allow_html=True)
+        with st.expander("Lesson Plan", expanded=True):
+            st.markdown(f'<div class="plan-text">{_md_to_html_safe(st.session_state.lesson_plan)}</div>', unsafe_allow_html=True)
+    else:
+        st.markdown(f'<div class="info-box">Review the proposed plans for all {num} lessons below. When satisfied, approve to get persona feedback.</div>', unsafe_allow_html=True)
+        lesson_chunks = _split_by_lesson(st.session_state.lesson_plan, num)
+        tabs = st.tabs([f"Lesson {i+1}" for i in range(len(lesson_chunks))])
+        for i, (tab, chunk) in enumerate(zip(tabs, lesson_chunks)):
+            with tab:
+                obj = st.session_state.daily_objectives[i] if i < len(st.session_state.daily_objectives) else ""
+                if obj:
+                    st.caption(f"Objective: {obj}")
+                st.markdown(f'<div class="plan-text">{_md_to_html_safe(chunk)}</div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
@@ -492,7 +535,7 @@ def render_phase_3():
                 feedback = get_persona_feedback(
                     lesson_plan=st.session_state.lesson_plan,
                     competency=st.session_state.competency,
-                    daily_objective=st.session_state.daily_objective,
+                    daily_objectives=st.session_state.daily_objectives,
                     grade_level=st.session_state.grade_level,
                 )
                 st.session_state.persona_feedback = feedback
@@ -589,7 +632,7 @@ def render_phase_4():
             try:
                 content = generate_lesson_content(
                     competency=st.session_state.competency,
-                    daily_objective=st.session_state.daily_objective,
+                    daily_objectives=st.session_state.daily_objectives,
                     lesson_type=st.session_state.lesson_type,
                     grade_level=st.session_state.grade_level,
                     duration=st.session_state.duration,
@@ -614,17 +657,40 @@ def render_phase_4():
     st.markdown('<div class="info-box">Review the generated content below. When satisfied, proceed to generate downloadable documents.</div>', unsafe_allow_html=True)
 
     content = st.session_state.lesson_content
+    num = st.session_state.num_lessons
 
-    # Parse sections by ## headers
-    sections = _parse_content_sections(content)
-
-    if sections:
-        for title, body in sections:
-            with st.expander(title, expanded=(title in ["Lesson Plan", "Exit Ticket"])):
-                st.markdown(body)
+    if num > 1:
+        # Try to split content by lesson, then show sections within each tab
+        lesson_chunks = _split_by_lesson(content, num)
+        if len(lesson_chunks) > 1:
+            tabs = st.tabs([f"Lesson {i+1}" for i in range(len(lesson_chunks))])
+            for i, (tab, chunk) in enumerate(zip(tabs, lesson_chunks)):
+                with tab:
+                    sections = _parse_content_sections(chunk)
+                    if sections:
+                        for title, body in sections:
+                            with st.expander(title, expanded=(title in ["Lesson Plan", "Exit Ticket"])):
+                                st.markdown(f'<div class="plan-text">{body}</div>', unsafe_allow_html=True)
+                    else:
+                        st.markdown(f'<div class="plan-text">{chunk}</div>', unsafe_allow_html=True)
+        else:
+            # Couldn't split — show as single block with sections
+            sections = _parse_content_sections(content)
+            if sections:
+                for title, body in sections:
+                    with st.expander(title, expanded=(title in ["Lesson Plan", "Exit Ticket"])):
+                        st.markdown(f'<div class="plan-text">{body}</div>', unsafe_allow_html=True)
+            else:
+                st.markdown(f'<div class="plan-text">{content}</div>', unsafe_allow_html=True)
     else:
-        # Fallback: show raw content
-        st.markdown(content)
+        # Single lesson — expandable sections
+        sections = _parse_content_sections(content)
+        if sections:
+            for title, body in sections:
+                with st.expander(title, expanded=(title in ["Lesson Plan", "Exit Ticket"])):
+                    st.markdown(f'<div class="plan-text">{body}</div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="plan-text">{content}</div>', unsafe_allow_html=True)
 
     col1, col2, col3 = st.columns([1, 1, 1])
     with col1:
@@ -662,6 +728,46 @@ def _parse_content_sections(content: str) -> list:
         sections.append((current_title, "\n".join(current_body).strip()))
 
     return sections
+
+
+def _md_to_html_safe(md_text: str) -> str:
+    """Let Streamlit render markdown but wrap it — we use st.markdown with the plan-text class."""
+    # We pass the raw markdown through; the wrapping div applies the compact CSS.
+    # Escape bare HTML angle brackets that aren't tags to avoid injection,
+    # but keep markdown formatting intact.
+    return md_text
+
+
+def _split_by_lesson(plan_text: str, num_lessons: int) -> list:
+    """Split a multi-lesson plan into chunks, one per lesson.
+
+    Looks for '# Lesson N' or '## Lesson N' headers. If those aren't found,
+    falls back to splitting on '---' horizontal rules or on '# ' headers.
+    """
+    import re
+
+    # Try splitting on # Lesson N or ## Lesson N patterns
+    pattern = r'(?=^#{1,2}\s+Lesson\s+\d)'
+    parts = re.split(pattern, plan_text, flags=re.MULTILINE)
+    parts = [p.strip() for p in parts if p.strip()]
+    if len(parts) >= num_lessons:
+        return parts[:num_lessons]
+
+    # Fallback: split on --- horizontal rules
+    if "\n---" in plan_text:
+        parts = [p.strip() for p in plan_text.split("\n---") if p.strip()]
+        if len(parts) >= num_lessons:
+            return parts[:num_lessons]
+
+    # Fallback: split on top-level # headers
+    pattern2 = r'(?=^#\s+)'
+    parts = re.split(pattern2, plan_text, flags=re.MULTILINE)
+    parts = [p.strip() for p in parts if p.strip()]
+    if len(parts) >= num_lessons:
+        return parts[:num_lessons]
+
+    # Last resort: return the whole plan as one chunk
+    return [plan_text]
 
 
 # ─── Phase 5: Document Generation & Download ─────────────────────────────────────
@@ -737,8 +843,8 @@ def render_phase_5():
 
     files = st.session_state.generated_files
 
-    # Build a nice title prefix from the daily objective
-    title_prefix = st.session_state.daily_objective[:50].replace(" ", "_").replace("/", "-")
+    # Build a nice title prefix from the first daily objective
+    title_prefix = st.session_state.daily_objectives[0][:50].replace(" ", "_").replace("/", "-")
     if not title_prefix:
         title_prefix = "lesson"
 
@@ -772,7 +878,12 @@ def render_phase_5():
     summary_cols = st.columns(3)
     with summary_cols[0]:
         st.markdown(f"**Competency:** {st.session_state.competency}")
-        st.markdown(f"**Objective:** {st.session_state.daily_objective}")
+        objs = st.session_state.daily_objectives
+        if len(objs) == 1:
+            st.markdown(f"**Objective:** {objs[0]}")
+        else:
+            for i, obj in enumerate(objs, 1):
+                st.markdown(f"**Lesson {i} Objective:** {obj}")
     with summary_cols[1]:
         st.markdown(f"**Lesson Type:** {st.session_state.lesson_type}")
         st.markdown(f"**Grade Level:** {st.session_state.grade_level}")
