@@ -410,7 +410,9 @@ TEACHER-APPROVED PROMPT ADDITIONS (incorporate all of these):
 
 {MARZANO_SUMMARY}
 {diff_section}
-Generate ALL content blocks now. Be thorough — every section should be complete and classroom-ready. The content you generate will be used directly to create slides, worksheets, and supplementary materials.
+Generate ALL content blocks now. Remember: you are building the actual physical materials for tomorrow's class. Every slide will be projected to students. Every worksheet will be printed for students to write on. Every station card will be cut out and placed on a table. The ## Lesson Plan is the only section the teacher sees privately — answer keys, timing, and facilitation notes go there and nowhere else.
+
+The ## Worksheet Content section must have ### sub-sections covering every activity where students produce written work. This is the student's primary document for the entire lesson.
 {"" if len(daily_objectives) == 1 else f"IMPORTANT: Generate content for ALL {len(daily_objectives)} lessons. Structure your output with a top-level '# Lesson 1', '# Lesson 2', etc. header for each lesson, with the ## content block headers nested within each lesson."}"""
 
     num = len(daily_objectives)

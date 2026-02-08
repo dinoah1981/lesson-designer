@@ -387,6 +387,25 @@ def _get_questions(text: str) -> List[str]:
     return qs
 
 
+def _strip_answer_lines(text: str) -> str:
+    """Remove lines that look like answer keys from student-facing content."""
+    cleaned = []
+    for line in text.split("\n"):
+        stripped = line.strip().lower()
+        if any(stripped.startswith(p) for p in [
+            "answer:", "correct answer:", "correct:", "solution:",
+            "expected response:", "expected answer:", "sample answer:",
+            "key:", "answer key:", "**answer", "**correct",
+            "**expected", "**solution",
+        ]):
+            continue
+        # Skip bare letter answers like "B" or "(B)"
+        if re.match(r'^[\(\[]?[A-Da-d][\)\]]?\.?$', stripped):
+            continue
+        cleaned.append(line)
+    return "\n".join(cleaned)
+
+
 def _get_time(text: str) -> Optional[str]:
     """Extract time reference like '5 min'."""
     m = re.search(r'(\d+)\s*(?:min(?:ute)?s?)', text, re.IGNORECASE)
@@ -478,9 +497,9 @@ def _build_lesson_slides(prs, sections: Dict[str, str]):
             slide_content(prs, "Activity", paras,
                           notes_text=raw, time_str=t, bar_color=S_TEAL)
 
-    # Exit Ticket
+    # Exit Ticket (strip any answer lines that leaked through)
     if "Exit Ticket" in sections:
-        raw = sections["Exit Ticket"]
+        raw = _strip_answer_lines(sections["Exit Ticket"])
         qs = _get_questions(raw) or _get_bullets(raw)
         if not qs:
             qs = [raw[:250]]
@@ -828,8 +847,23 @@ def build_worksheet(content: str, title: str, output_path: str):
 
     if ws_text:
         parts = _parse_worksheet_parts(ws_text)
-        for part in parts:
-            _build_part(doc, part)
+        if parts:
+            for part in parts:
+                _build_part(doc, part)
+        else:
+            # Worksheet Content exists but has no ### sub-parts — render as flat content
+            _doc_para(doc, "Complete each section as directed.",
+                      font=SANS, sz=10, italic=True, color=D_GRAY, after=76200)
+            bullets = _get_bullets(ws_text)
+            if bullets:
+                for b in bullets:
+                    _doc_para(doc, f"\u2022 {b}", font=SANS, sz=10, after=38100)
+                    _response_table(doc, n_lines=2)
+            else:
+                paras = _get_paras(ws_text, 10)
+                for p_text in paras:
+                    _doc_para(doc, p_text, font=SANS, sz=10, after=38100)
+                    _response_table(doc, n_lines=2)
     else:
         # Fallback: build from other sections
         _doc_para(doc, "Complete each section as directed.",
@@ -846,7 +880,7 @@ def build_worksheet(content: str, title: str, output_path: str):
                 _response_table(doc, n_lines=3)
 
     # Always add Exit Ticket at end if not already in worksheet parts
-    et_text = sections.get("Exit Ticket", "")
+    et_text = _strip_answer_lines(sections.get("Exit Ticket", ""))
     if et_text and "Exit Ticket" not in ws_text:
         _doc_para(doc, "Exit Ticket", font=SERIF, sz=12, bold=True,
                   color=D_NAVY, before=190500, after=63500)
@@ -910,7 +944,7 @@ def build_modified_worksheet(content: str, title: str, output_path: str):
                 _response_table(doc, n_lines=3)
 
     # Exit Ticket
-    et_text = sections.get("Exit Ticket", "")
+    et_text = _strip_answer_lines(sections.get("Exit Ticket", ""))
     if et_text and "Exit Ticket" not in ws_text:
         _doc_para(doc, "Exit Ticket", font=SERIF, sz=12, bold=True,
                   color=D_NAVY, before=190500, after=63500)
@@ -959,7 +993,7 @@ def build_extension_worksheet(content: str, title: str, output_path: str):
         _response_table(doc, n_lines=4)
 
     # Exit Ticket
-    et_text = sections.get("Exit Ticket", "")
+    et_text = _strip_answer_lines(sections.get("Exit Ticket", ""))
     if et_text and "Exit Ticket" not in ws_text:
         _doc_para(doc, "Exit Ticket", font=SERIF, sz=12, bold=True,
                   color=D_NAVY, before=190500, after=63500)

@@ -252,48 +252,144 @@ Format each addition as a single bullet point starting with an action verb, foll
 
 Only include additions that would meaningfully improve the lesson. Do not repeat concerns already addressed in the plan."""
 
-CONTENT_GENERATION_SYSTEM_PROMPT = """You are an expert instructional designer creating complete, structured lesson content. Generate ALL content blocks for the lesson.
+CONTENT_GENERATION_SYSTEM_PROMPT = """You are building materials for a real classroom. Before you generate anything, hold this scene in your mind throughout the entire process:
+
+THE ROOM
+A classroom. 25-30 teenagers sitting at desks. A projector displays your slides on a screen at the front. The teacher stands beside the screen. Each student has a printed worksheet on their desk and a pen. The teacher has a separate copy of the lesson plan that only they can see.
+
+THE PEOPLE AND WHAT THEY CAN SEE
+
+The STUDENTS can see:
+- The projected slides (one at a time, from 15 feet away)
+- Their own worksheet (the paper on their desk)
+- Any printed handouts the teacher distributes (station cards, reading passages, etc.)
+
+The students CANNOT see:
+- The teacher's lesson plan
+- Speaker notes
+- The answer key
+- What's on the teacher's computer screen
+
+The TEACHER can see:
+- Everything the students see, plus:
+- The lesson plan (Slide 1 or a separate document)
+- Speaker notes on their laptop (the students cannot see these)
+- The answer key
+
+THE FLOW OF TIME
+
+A lesson is a sequence of moments. At each moment, the teacher is doing ONE thing and the students are doing ONE thing. Your materials must support each moment:
+
+1. BELL RINGS — Students look at the projected Do Now slide and begin working on their worksheet. The slide must contain COMPLETE instructions and all content students need. The worksheet must have space for them to write their response. The teacher circulates silently.
+
+2. DO NOW REVIEW — Teacher leads brief discussion. Slide may update to show answers or key points. Students may correct their work on the worksheet.
+
+3. FRAMING — Teacher delivers a brief hook. The slide shows a scenario, question, or provocation. Students read and react. Everything students need to understand the hook must be ON THE SLIDE — if you reference a sprinkler system, the sprinkler scenario must be visible, not hidden in notes.
+
+4. CORE CONTENT — Teacher presents new material. Slides show the content being taught — definitions, examples, diagrams, data. The worksheet has space for students to take notes or fill in key information as the teacher presents. If you intend the teacher to show a graph, the graph (or a clear representation of it) must be on the slide. Writing "Visual: graph of parabola" is like writing "Visual: picture of sunset" in a photo album — it means nothing to the viewer.
+
+5. GUIDED PRACTICE — Students work on problems while teacher supports. The slide shows the problems. The worksheet has space to solve them. The ANSWERS are not on the slide or worksheet — they exist only in the teacher's materials.
+
+6. ACTIVITY — Students work in pairs/groups on a structured task. The slide shows high-level instructions and a timer. The worksheet has the actual workspace for the activity. If the activity involves CARDS (station cards, sorting cards, matching cards), those cards must be CREATED as actual printable cards in the supplementary materials — with the real content on them, not a description of what the content should be. Think: could the teacher print this page, cut it into cards, and put them on tables right now?
+
+7. DISCUSSION — Teacher facilitates class conversation. Slide shows the discussion prompt or a student work sample. The teacher's notes remind them of key points to draw out.
+
+8. EXIT TICKET — Students work INDEPENDENTLY and SILENTLY. The slide shows the questions. The worksheet has space to answer. The slide and worksheet contain ONLY THE QUESTIONS. The teacher's answer key is completely separate. This is an assessment — showing answers would be like printing the answer key on the back of a test.
+
+THE TEST FOR EVERY PIECE OF CONTENT
+
+Before placing any content anywhere, ask:
+
+"If a student looked at this right now, would it make sense and be appropriate?"
+
+- If YES — It belongs on the slide or worksheet
+- If NO because it's instructions for the teacher — It belongs in speaker notes or the lesson plan
+- If NO because it's an answer — It belongs only in the teacher answer key
+- If NO because it's a description of something that should exist — You need to CREATE the actual thing
+
+THE CORE PRINCIPLE
+
+You are not writing ABOUT a lesson. You are building the actual physical materials that will be used in a real room with real people tomorrow morning. Every slide will be projected. Every worksheet will be printed. Every card will be cut out and placed on a table. Generate accordingly.
+
+THE MATERIALS MUST ACTUALLY WORK
+
+Getting content into the right place is necessary but not sufficient. Each artifact must serve its pedagogical purpose — helping every student in the room reach the daily objective and build toward mastery of the competency.
+
+THE SLIDE DECK is the teacher's primary instructional support tool. It must carry the lesson. A substitute teacher picking up this deck should be able to facilitate effectively. Design slides using Universal Design for Learning principles:
+- Domain-specific and complex terms are defined right on the slide when they first appear — don't assume students know Tier 2/3 vocabulary
+- Slides presenting problems or tasks are followed by slides that support reviewing them — worked examples, step-by-step breakdowns, or visual models the teacher can walk through with the class
+- Abstract concepts are accompanied by visual representations: number lines, tables, color-coded examples, annotated equations, side-by-side comparisons — not described in words ("Visual: parabola") but actually presented using text-based or structured representations
+- Keep text concise — students are reading from 15 feet away. Use bullet points, not paragraphs
+- The deck follows a rhythm: present content → students practice → support review → present next concept. Each transition should feel natural.
+
+THE WORKSHEET is each student's personal path through the lesson. A student working through it — even without the teacher's direct guidance — should be able to make meaningful progress toward understanding. Questions should build from accessible entry points to the full rigor of the objective. Tables and graphic organizers should structure student thinking, not just collect answers. Every activity where a student produces work needs a corresponding section with appropriate space.
+
+THE EXIT TICKET is a fast diagnostic instrument, not an exam. A teacher grading 120 exit tickets across 4 class periods at the end of a long day needs to quickly and accurately gauge each student's mastery of the daily objective. Design for:
+- 2-3 focused questions that directly target the daily objective (not the broad competency)
+- At least one question with a clear right/wrong answer for fast sorting (got it / almost / needs reteach)
+- Questions that reveal common misconceptions — so the teacher knows not just WHO struggled but WHAT they struggled with
+- Brevity — if it takes a student more than 5-7 minutes, it's too long
+
+THE STATION CARDS / HANDOUTS are self-contained learning experiences. A group of students picking up a card should be able to engage with it immediately — the card provides all necessary context, data, and instructions. The teacher shouldn't need to explain what to do with each card.
 
 CONTENT QUALITY STANDARDS:
 - Discussion prompts must be thought-provoking and open-ended, not yes/no questions
 - Activities must have specific, step-by-step student instructions
 - The Do Now must connect to the day's content (not generic "journal about your feelings")
 - The Framing must hook student interest with a compelling question, scenario, or connection
-- The Exit Ticket must directly assess the daily objective — not the competency broadly, the SPECIFIC daily objective
 - All vocabulary should be defined in student-friendly language
 - Group/station materials MUST follow the Discovery Principle (provide data, not conclusions)
 
 {discovery_principle}
 
-FORMATTING:
-Return your response as clearly labeled sections using markdown headers (##). Include ALL of these sections:
+OUTPUT SECTIONS:
+Return your response using these ## headers.
 
 ## Lesson Plan
-(Complete lesson plan with timing, teacher notes, and materials list)
+The teacher's private reference. Hidden slide + speaker notes. Students never see this.
+Include: complete timing for each segment, answer keys for ALL questions (Do Now, activity, exit ticket), anticipated misconceptions, facilitation tips, scaffolding notes, and materials checklist.
 
 ## Do Now
-(Full Do Now activity with instructions and expected student response)
+The opening slide projected when students walk in. They read it and start working independently.
+Write the complete activity as students will see it: clear instructions, the problem/prompt, and any necessary context. A student arriving late should be able to read this slide and begin working.
 
 ## Framing
-(The hook/framing text — what the teacher says/shows to set up the lesson)
+The slide displayed during the lesson hook. Students read this on screen.
+Write the actual content students see: a scenario, question, surprising fact, or provocation. Everything they need to understand the hook must be on this slide.
 
 ## Core Content
-(The main instructional content — key concepts, vocabulary, examples, explanations)
+Multiple content slides students reference during instruction. Follow UDL principles:
+- Write vocabulary as **Term**: student-friendly definition
+- Write concepts as clear, concise statements with worked examples
+- After presenting problems or new concepts, include review/support content (worked examples, visual models, step-by-step breakdowns) that the teacher can use to walk through the material with students
+- Use structured representations (tables, side-by-side comparisons, annotated examples) to make abstract ideas concrete
 
 ## Discussion Prompts
-(Numbered discussion questions with follow-up probes and possible student responses)
+The slide displayed during discussion. Students read the questions on screen.
+Write 2-3 numbered, substantive questions that provoke genuine thinking and debate.
 
 ## Activity Instructions
-(Detailed student-facing instructions for the main activity)
+The slide displayed during the activity with numbered steps students follow.
 
 ## Group Materials
-(Station cards, data sheets, case studies, etc. — if the activity requires them. Follow the Discovery Principle.)
+Printed cards that student groups physically hold, read, and discuss. Each ### subsection becomes one card.
+Write the ACTUAL card content — real equations, real data, real scenarios, real instructions. Could a teacher print this and cut it into cards right now?
+If no group materials are needed, write: "N/A"
 
 ## Worksheet Content
-(Complete content for the student worksheet — sections, questions, graphic organizers, response spaces)
+The printed packet each student writes on throughout the entire lesson — their personal path through the material. Structure with ### sub-sections that mirror the lesson flow:
+### Part 1: Do Now
+(The Do Now problem/prompt with space for student responses)
+### Part 2: [Name of main activity]
+(Recording sheets, data tables, graphic organizers, or numbered questions for the core activity. If students use station cards, include a recording grid with a row for each station.)
+### Part 3: Practice / Reflection
+(Additional practice problems, reflection questions, or discussion notes space)
+### Part 4: Exit Ticket
+(The exit ticket questions with space for responses)
+Every activity where students produce written work needs a corresponding section here. Questions should build from accessible to rigorous.
 
 ## Exit Ticket
-(The exit ticket question(s) that assess the daily objective)
+The final slide students see. 2-3 focused questions targeting the daily objective. At least one clear right/wrong question for fast teacher sorting. Design for a teacher who needs to accurately gauge 120 students' mastery in a reasonable amount of time.
 """
 
 # ─── Marzano Framework Summary (embedded for prompts) ───────────────────────────
