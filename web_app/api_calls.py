@@ -1,11 +1,10 @@
 """
 Lesson Designer v2 — Claude API Functions
 All Claude API interactions: knowledge/skills extraction, lesson planning,
-persona feedback, prompt additions, content generation, document code generation.
+persona feedback, prompt additions, content generation.
 """
 
 import json
-import traceback
 from typing import Dict, List, Any, Optional
 import anthropic
 import streamlit as st
@@ -21,8 +20,6 @@ from config import (
     PERSONA_FEEDBACK_SYSTEM_PROMPT,
     PROMPT_ADDITIONS_SYSTEM_PROMPT,
     CONTENT_GENERATION_SYSTEM_PROMPT,
-    DOCUMENT_CODE_SYSTEM_PROMPT,
-    EXEC_SETUP_CODE,
 )
 
 
@@ -426,113 +423,3 @@ Generate ALL content blocks now. Be thorough — every section should be complet
 
     return response.content[0].text
 
-
-# ─── 6. Document Code Generation ────────────────────────────────────────────────
-
-def generate_document_code(
-    content: str,
-    slides_path: str,
-    worksheet_path: str,
-    supplementary_path: Optional[str] = None,
-    modified_path: Optional[str] = None,
-    extension_path: Optional[str] = None,
-) -> str:
-    """
-    Ask Claude to write python-pptx/python-docx code to create all documents.
-    Returns the generated Python code as a string.
-    """
-    client = get_client()
-
-    files_section = f"""FILES TO CREATE (use these exact variable names and paths):
-
-1. slides_path = "{slides_path}"
-   → Create a slide deck (.pptx) with hidden lesson plan slide, objective slide, and teaching slides.
-
-2. worksheet_path = "{worksheet_path}"
-   → Create a student worksheet (.docx) with sections matching the lesson activities.
-"""
-
-    if supplementary_path:
-        files_section += f"""
-3. supplementary_path = "{supplementary_path}"
-   → Create supplementary materials (.docx) — station cards, data sheets, etc. referenced in the lesson.
-   → FOLLOW THE DISCOVERY PRINCIPLE for all group materials.
-"""
-
-    if modified_path:
-        files_section += f"""
-4. modified_path = "{modified_path}"
-   → Create a modified worksheet (.docx) for struggling learners with scaffolds.
-"""
-
-    if extension_path:
-        files_section += f"""
-5. extension_path = "{extension_path}"
-   → Create an extension worksheet (.docx) for advanced learners with deeper challenges.
-"""
-
-    prompt = f"""Write Python code to create classroom materials from this lesson content.
-
-LESSON CONTENT:
-{content}
-
-{files_section}
-
-{DISCOVERY_PRINCIPLE}
-
-Write ONLY executable Python code. No markdown fences, no explanations, no comments outside the code.
-The following are already imported and available: Presentation, Document, Inches, Pt, Emu, RGBColor, PP_ALIGN, MSO_ANCHOR, MSO_SHAPE, qn, DocxPt, DocxInches, Twips, DocxRGBColor, WD_ALIGN_PARAGRAPH, WD_LINE_SPACING, WD_TABLE_ALIGNMENT, docx_qn, OxmlElement, set_cell_shading.
-The path variables (slides_path, worksheet_path, etc.) are already defined as strings.
-
-Create all specified files. Make them polished and classroom-ready."""
-
-    response = client.messages.create(
-        model=CLAUDE_MODEL,
-        max_tokens=16000,
-        system=DOCUMENT_CODE_SYSTEM_PROMPT,
-        messages=[{"role": "user", "content": prompt}],
-    )
-
-    return response.content[0].text
-
-
-def execute_document_code(
-    code: str,
-    slides_path: str,
-    worksheet_path: str,
-    supplementary_path: Optional[str] = None,
-    modified_path: Optional[str] = None,
-    extension_path: Optional[str] = None,
-) -> bool:
-    """
-    Execute Claude-generated document creation code.
-    Returns True if successful, False if code execution failed.
-    """
-    # Strip markdown fences if present
-    if "```python" in code:
-        code = code.split("```python")[1].split("```")[0]
-    elif "```" in code:
-        code = code.split("```")[1].split("```")[0]
-
-    # Build execution context
-    context_vars = {
-        "slides_path": slides_path,
-        "worksheet_path": worksheet_path,
-    }
-    if supplementary_path:
-        context_vars["supplementary_path"] = supplementary_path
-    if modified_path:
-        context_vars["modified_path"] = modified_path
-    if extension_path:
-        context_vars["extension_path"] = extension_path
-
-    exec_globals = {"__builtins__": __builtins__, **context_vars}
-    full_code = EXEC_SETUP_CODE + "\n" + code
-
-    try:
-        exec(full_code, exec_globals)
-        return True
-    except Exception as e:
-        st.error(f"Document generation error: {e}")
-        traceback.print_exc()
-        return False

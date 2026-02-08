@@ -15,8 +15,13 @@ from api_calls import (
     get_persona_feedback,
     generate_prompt_additions,
     generate_lesson_content,
-    generate_document_code,
-    execute_document_code,
+)
+from templates import (
+    build_slide_deck,
+    build_worksheet,
+    build_modified_worksheet,
+    build_extension_worksheet,
+    build_supplementary,
 )
 
 # ─── Page Config ─────────────────────────────────────────────────────────────────
@@ -777,12 +782,10 @@ def render_phase_5():
 
     # Auto-generate if no files yet
     if not st.session_state.generated_files:
-        # Create temp directory for output files
         output_dir = tempfile.mkdtemp()
         slides_path = os.path.join(output_dir, "slides.pptx")
         worksheet_path = os.path.join(output_dir, "worksheet.docx")
 
-        # Determine if we need supplementary materials
         content_lower = st.session_state.lesson_content.lower()
         needs_supplementary = any(
             kw in content_lower
@@ -792,45 +795,39 @@ def render_phase_5():
         modified_path = os.path.join(output_dir, "worksheet_modified.docx") if st.session_state.diff_struggling else None
         extension_path = os.path.join(output_dir, "worksheet_extension.docx") if st.session_state.diff_advanced else None
 
-        with st.spinner("Generating documents... This may take a minute."):
+        # Build a title from the first objective
+        doc_title = st.session_state.daily_objectives[0] if st.session_state.daily_objectives else "Lesson"
+
+        with st.spinner("Generating documents..."):
             try:
-                code = generate_document_code(
-                    content=st.session_state.lesson_content,
-                    slides_path=slides_path,
-                    worksheet_path=worksheet_path,
-                    supplementary_path=supplementary_path,
-                    modified_path=modified_path,
-                    extension_path=extension_path,
-                )
+                content = st.session_state.lesson_content
+                objectives = st.session_state.daily_objectives
+                duration = st.session_state.duration
 
-                success = execute_document_code(
-                    code=code,
-                    slides_path=slides_path,
-                    worksheet_path=worksheet_path,
-                    supplementary_path=supplementary_path,
-                    modified_path=modified_path,
-                    extension_path=extension_path,
-                )
+                build_slide_deck(content, doc_title, objectives, duration, slides_path)
+                build_worksheet(content, doc_title, worksheet_path)
 
-                if success:
-                    files = {}
-                    if os.path.exists(slides_path):
-                        files["slides"] = slides_path
-                    if os.path.exists(worksheet_path):
-                        files["worksheet"] = worksheet_path
-                    if supplementary_path and os.path.exists(supplementary_path):
-                        files["supplementary"] = supplementary_path
-                    if modified_path and os.path.exists(modified_path):
-                        files["modified"] = modified_path
-                    if extension_path and os.path.exists(extension_path):
-                        files["extension"] = extension_path
+                if supplementary_path:
+                    build_supplementary(content, doc_title, supplementary_path)
+                if modified_path:
+                    build_modified_worksheet(content, doc_title, modified_path)
+                if extension_path:
+                    build_extension_worksheet(content, doc_title, extension_path)
 
-                    st.session_state.generated_files = files
-                else:
-                    st.error("Document generation failed. Check the error above and try again.")
-                    if st.button("Retry Document Generation"):
-                        st.rerun()
-                    return
+                files = {}
+                if os.path.exists(slides_path):
+                    files["slides"] = slides_path
+                if os.path.exists(worksheet_path):
+                    files["worksheet"] = worksheet_path
+                if supplementary_path and os.path.exists(supplementary_path):
+                    files["supplementary"] = supplementary_path
+                if modified_path and os.path.exists(modified_path):
+                    files["modified"] = modified_path
+                if extension_path and os.path.exists(extension_path):
+                    files["extension"] = extension_path
+
+                st.session_state.generated_files = files
+
             except Exception as e:
                 st.error(f"Error generating documents: {e}")
                 if st.button("Retry Document Generation"):
