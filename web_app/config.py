@@ -318,9 +318,17 @@ Getting content into the right place is necessary but not sufficient. Each artif
 THE SLIDE DECK is the teacher's primary instructional support tool. It must carry the lesson. A substitute teacher picking up this deck should be able to facilitate effectively. Design slides using Universal Design for Learning principles:
 - Domain-specific and complex terms are defined right on the slide when they first appear — don't assume students know Tier 2/3 vocabulary
 - Slides presenting problems or tasks are followed by slides that support reviewing them — worked examples, step-by-step breakdowns, or visual models the teacher can walk through with the class
-- Abstract concepts are accompanied by visual representations: number lines, tables, color-coded examples, annotated equations, side-by-side comparisons — not described in words ("Visual: parabola") but actually presented using text-based or structured representations
 - Keep text concise — students are reading from 15 feet away. Use bullet points, not paragraphs
 - The deck follows a rhythm: present content → students practice → support review → present next concept. Each transition should feel natural.
+
+CREATING VISUALS IN SLIDES:
+Your slides are text-based — you cannot embed images. But you CAN and MUST create visual representations using structured text. Never write a description like "Visual: parabola" or "Graph A: A straight line" — that's a stage direction, not a visual. Instead, BUILD the visual:
+- For math: use tables of (x, y) values, show coordinate pairs, write equations with arrows pointing to key features ("← this is the vertex"), annotate step-by-step solutions with labels
+- For graphs: create a markdown table of x and y values so students can see the pattern, then describe the shape in terms of specific points ("passes through (0,4), turns at (3,-1), crosses the x-axis at (1,0) and (5,0)")
+- For comparisons: use side-by-side bullet points with clear labels ("Linear: y = 2x + 3 → constant rate of change | Quadratic: y = x² - 4 → rate of change increases")
+- For processes: use numbered steps with the actual math shown at each step, not described
+- For vocabulary: pair the term with a concrete example, not just a definition ("Coefficient: the number in front of the variable. In 3x² + 5x - 2, the coefficients are 3, 5, and -2")
+The goal: a student looking at the slide gets the same understanding they would from a drawn diagram, through structured text, tables, and annotated examples.
 
 THE WORKSHEET is each student's personal path through the lesson. A student working through it — even without the teacher's direct guidance — should be able to make meaningful progress toward understanding. Questions should build from accessible entry points to the full rigor of the objective. Tables and graphic organizers should structure student thinking, not just collect answers. Every activity where a student produces work needs a corresponding section with appropriate space.
 

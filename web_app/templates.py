@@ -117,6 +117,18 @@ def _add_runs(p, text, font=SANS, sz=14, color=S_TEXT, base_bold=False):
         run.font.color.rgb = _rgb(color)
 
 
+def _rich_txt(slide, text, x, y, w, h, font=SANS, sz=14, color=S_TEXT,
+              align=PP_ALIGN.LEFT):
+    """Like _txt but parses **bold** markdown into actual bold formatting."""
+    tb = slide.shapes.add_textbox(x, y, w, h)
+    tf = tb.text_frame
+    tf.word_wrap = True
+    p = tf.paragraphs[0]
+    p.alignment = align
+    _add_runs(p, str(text), font=font, sz=sz, color=color)
+    return tb
+
+
 def _bullets(slide, lines, x, y, w, h, font=SANS, sz=18, color=S_TEXT,
              spacing=1.2, bullet_char=True):
     """Add a text box with multiple bullet lines."""
@@ -224,6 +236,52 @@ def slide_content(prs, title, items, notes_text="", time_str=None,
     return s
 
 
+def slide_table(prs, title, headers, rows, bar_color=S_NAVY, bg_color=S_CREAM):
+    """Content slide with a data table (for coordinate tables, comparisons, etc.)."""
+    s = _blank(prs)
+    _bg(s, bg_color)
+    _header_bar(s, title, fill=bar_color)
+
+    n_cols = len(headers)
+    n_rows = min(len(rows), 8)
+    table_w = min(n_cols * 1.5, 8.8)
+    x_off = (10 - table_w) / 2  # center the table
+    col_w = table_w / n_cols
+
+    tbl = s.shapes.add_table(1 + n_rows, n_cols,
+                              Inches(x_off), Inches(1.2),
+                              Inches(table_w), Inches(0.4 + n_rows * 0.35)).table
+
+    # Header row
+    for j, h in enumerate(headers):
+        cell = tbl.cell(0, j)
+        cell.text = h
+        for p in cell.text_frame.paragraphs:
+            p.font.name = SANS
+            p.font.size = Pt(12)
+            p.font.bold = True
+            p.font.color.rgb = _rgb(S_WHITE)
+            p.alignment = PP_ALIGN.CENTER
+        cell.fill.solid()
+        cell.fill.fore_color.rgb = _rgb(S_NAVY)
+
+    # Data rows
+    for i, row_data in enumerate(rows[:n_rows]):
+        fill = S_LIGHT if i % 2 == 0 else S_WHITE
+        for j in range(n_cols):
+            cell = tbl.cell(i + 1, j)
+            cell.text = row_data[j] if j < len(row_data) else ""
+            for p in cell.text_frame.paragraphs:
+                p.font.name = SANS
+                p.font.size = Pt(11)
+                p.font.color.rgb = _rgb(S_TEXT)
+                p.alignment = PP_ALIGN.CENTER
+            cell.fill.solid()
+            cell.fill.fore_color.rgb = _rgb(fill)
+
+    return s
+
+
 def slide_cards(prs, title, cards, bar_color=S_NAVY, bg_color=S_CREAM):
     """Info cards with colored left accent bars."""
     s = _blank(prs)
@@ -261,8 +319,8 @@ def slide_activity(prs, title, steps, time_str=None):
         _rect(s, Inches(0.6), Inches(y), Inches(0.40), Inches(0.40), S_TEAL)
         _txt(s, str(i), Inches(0.6), Inches(y + 0.02), Inches(0.40), Inches(0.36),
              font=SERIF, sz=16, bold=True, color=S_WHITE, align=PP_ALIGN.CENTER)
-        _txt(s, step[:150], Inches(1.15), Inches(y + 0.05), Inches(8.2), Inches(0.35),
-             font=SANS, sz=14, color=S_TEXT)
+        _rich_txt(s, step[:150], Inches(1.15), Inches(y + 0.05), Inches(8.2), Inches(0.35),
+                  font=SANS, sz=14, color=S_TEXT)
         y += step_h + 0.1
 
     return s
@@ -281,8 +339,8 @@ def slide_discussion(prs, title, questions):
     for i, q in enumerate(questions[:3], 1):
         _txt(s, str(i), Inches(0.5), Inches(y), Inches(0.5), Inches(0.45),
              font=SERIF, sz=24, bold=True, color=S_TEAL, align=PP_ALIGN.CENTER)
-        _txt(s, q[:200], Inches(1.1), Inches(y + 0.02), Inches(8.2), Inches(row_h - 0.15),
-             font=SANS, sz=16, color=S_TEXT)
+        _rich_txt(s, q[:200], Inches(1.1), Inches(y + 0.02), Inches(8.2), Inches(row_h - 0.15),
+                  font=SANS, sz=16, color=S_TEXT)
         y += row_h
 
     return s
@@ -306,8 +364,8 @@ def slide_exit_ticket(prs, questions):
         _rect(s, Inches(0.66), Inches(y), Inches(8.74), Inches(card_h), S_LIGHT)
         _txt(s, f"Question {i}", Inches(0.9), Inches(y + 0.06), Inches(8.3), Inches(0.25),
              font=SANS, sz=11, bold=True, color=S_TEAL)
-        _txt(s, q[:250], Inches(0.9), Inches(y + 0.30), Inches(8.3), Inches(card_h - 0.38),
-             font=SANS, sz=14, color=S_TEXT)
+        _rich_txt(s, q[:250], Inches(0.9), Inches(y + 0.30), Inches(8.3), Inches(card_h - 0.38),
+                  font=SANS, sz=14, color=S_TEXT)
         y += card_h + 0.15
 
     return s
@@ -460,7 +518,7 @@ def _build_lesson_slides(prs, sections: Dict[str, str]):
         slide_content(prs, "Why This Matters", items,
                       notes_text=raw, time_str="3 min")
 
-    # Core Content — vocabulary cards + concept bullets
+    # Core Content — vocabulary cards + tables + concept bullets
     if "Core Content" in sections:
         raw = sections["Core Content"]
         vocab = _get_bold_terms(raw)
@@ -468,9 +526,19 @@ def _build_lesson_slides(prs, sections: Dict[str, str]):
             slide_cards(prs, "Key Vocabulary",
                         [(t, d) for t, d in vocab[:4]])
 
-        items = _get_bullets(raw)
+        # Detect and render markdown tables as slide tables
+        table_lines = [l for l in raw.split("\n") if l.strip().startswith("|")]
+        if table_lines:
+            headers, tbl_rows = _parse_md_table(table_lines)
+            if headers and tbl_rows:
+                slide_table(prs, "Key Concepts", headers, tbl_rows)
+
+        # Non-table content as bullet slides
+        non_table_lines = [l for l in raw.split("\n") if not l.strip().startswith("|")]
+        non_table_raw = "\n".join(non_table_lines)
+        items = _get_bullets(non_table_raw)
         if not items:
-            items = _get_paras(raw, 5)
+            items = _get_paras(non_table_raw, 5)
         # Split into slides of max 5 items
         for chunk_start in range(0, len(items), 5):
             chunk = items[chunk_start:chunk_start + 5]
@@ -586,15 +654,40 @@ def _cell_valign(cell, val='center'):
 
 def _doc_para(doc, text, font=SANS, sz=10, bold=False, italic=False,
               color=None, align=None, before=None, after=None):
-    """Add a formatted paragraph to the document."""
+    """Add a formatted paragraph to the document. Parses **bold** markdown."""
     p = doc.add_paragraph()
-    run = p.add_run(str(text))
-    run.font.name = font
-    run.font.size = DocxPt(sz)
-    run.font.bold = bold
-    run.font.italic = italic
-    if color:
-        run.font.color.rgb = _drgb(color)
+    text = str(text)
+
+    # Parse **bold** markdown into runs
+    parts = re.split(r'(\*\*.*?\*\*)', text)
+    has_markdown = any(part.startswith("**") and part.endswith("**") for part in parts if part)
+
+    if has_markdown:
+        for part in parts:
+            if not part:
+                continue
+            if part.startswith("**") and part.endswith("**"):
+                run = p.add_run(part[2:-2])
+                run.font.bold = True
+            else:
+                run = p.add_run(part)
+                if bold:
+                    run.font.bold = True
+                if italic:
+                    run.font.italic = True
+            run.font.name = font
+            run.font.size = DocxPt(sz)
+            if color:
+                run.font.color.rgb = _drgb(color)
+    else:
+        run = p.add_run(text)
+        run.font.name = font
+        run.font.size = DocxPt(sz)
+        run.font.bold = bold
+        run.font.italic = italic
+        if color:
+            run.font.color.rgb = _drgb(color)
+
     if align:
         p.alignment = align
     pf = p.paragraph_format
@@ -832,7 +925,11 @@ def _build_part(doc, part: Dict, body_sz=10):
             # Question with response area
             q_text = f"{elem['number']}. {elem['text']}"
             _doc_para(doc, q_text, font=SANS, sz=body_sz, bold=False, after=38100)
-            _response_table(doc, n_lines=2)
+            # Only add response table if question doesn't already have inline blanks
+            has_blanks = ("____" in elem["text"] or "______" in elem["text"]
+                          or "___:" in elem["text"])
+            if not has_blanks:
+                _response_table(doc, n_lines=2)
 
 
 def build_worksheet(content: str, title: str, output_path: str):
