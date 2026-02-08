@@ -321,14 +321,24 @@ THE SLIDE DECK is the teacher's primary instructional support tool. It must carr
 - Keep text concise — students are reading from 15 feet away. Use bullet points, not paragraphs
 - The deck follows a rhythm: present content → students practice → support review → present next concept. Each transition should feel natural.
 
-CREATING VISUALS IN SLIDES:
-Your slides are text-based — you cannot embed images. But you CAN and MUST create visual representations using structured text. Never write a description like "Visual: parabola" or "Graph A: A straight line" — that's a stage direction, not a visual. Instead, BUILD the visual:
-- For math: use tables of (x, y) values, show coordinate pairs, write equations with arrows pointing to key features ("← this is the vertex"), annotate step-by-step solutions with labels
-- For graphs: create a markdown table of x and y values so students can see the pattern, then describe the shape in terms of specific points ("passes through (0,4), turns at (3,-1), crosses the x-axis at (1,0) and (5,0)")
-- For comparisons: use side-by-side bullet points with clear labels ("Linear: y = 2x + 3 → constant rate of change | Quadratic: y = x² - 4 → rate of change increases")
-- For processes: use numbered steps with the actual math shown at each step, not described
-- For vocabulary: pair the term with a concrete example, not just a definition ("Coefficient: the number in front of the variable. In 3x² + 5x - 2, the coefficients are 3, 5, and -2")
-The goal: a student looking at the slide gets the same understanding they would from a drawn diagram, through structured text, tables, and annotated examples.
+CREATING VISUALS:
+You can create actual visuals — graphs, charts, diagrams, number lines, timelines, comparison charts — that will be rendered as real images on slides. When a concept would be clearer with a visual, create one. Don't describe what a visual would look like ("Visual: parabola sketch") — that's a stage direction, not a visual. Instead, specify the visual using this format anywhere in your content:
+
+```chart
+type: [line | bar | scatter | number_line | comparison]
+title: [Chart title]
+data: [structured data — see below]
+labels: [any annotations or key points to highlight]
+```
+
+Data formats by type:
+- line/scatter: x_values: [-2, -1, 0, 1, 2, 3] | y_values: [4, 1, 0, 1, 4, 9] | series_label: y = x²
+  (Multiple series: add y_values2, series_label2, etc.)
+- bar: categories: [Cat A, Cat B, Cat C] | values: [10, 25, 15] | series_label: Results
+- number_line: min: -5 | max: 5 | points: [-3, 0, 2] | point_labels: [root, origin, root]
+- comparison: left_title: Linear | left_items: [y = mx + b, Straight line, Constant rate] | right_title: Quadratic | right_items: [y = ax² + bx + c, Parabola, Changing rate]
+
+Use visuals wherever they would genuinely help students understand — to show the shape of a function, illustrate a trend, compare two things side by side, place events on a timeline, or make an abstract concept concrete. Think about what a good teacher would draw on the board to help students see it.
 
 THE WORKSHEET is each student's personal path through the lesson. A student working through it — even without the teacher's direct guidance — should be able to make meaningful progress toward understanding. Questions should build from accessible entry points to the full rigor of the objective. Tables and graphic organizers should structure student thinking, not just collect answers. Every activity where a student produces work needs a corresponding section with appropriate space.
 

@@ -4,8 +4,16 @@ Deterministic template functions for professional slide decks and worksheets.
 Matches the visual design system from Claude.ai skill output.
 """
 
+import io
 import re
+import tempfile
 from typing import List, Dict, Tuple, Optional
+
+import matplotlib
+matplotlib.use('Agg')  # Non-interactive backend
+import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
+import numpy as np
 
 from pptx import Presentation
 from pptx.util import Inches, Pt, Emu
@@ -53,6 +61,231 @@ SANS = "Helvetica"
 # Slide dimensions (10" x 5.625" widescreen 16:9)
 SW = Inches(10)
 SH = Inches(5.625)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# CHART RENDERING (matplotlib → image bytes)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+# Chart color palette (matches slide design system)
+_CHART_COLORS = ["#1B998B", "#2D3561", "#C69749", "#B85042", "#4DAE58", "#6B7280"]
+_CHART_BG = "#F7F7F2"
+_CHART_TEXT = "#1D1D1D"
+_CHART_GRID = "#CCCCCC"
+
+
+def _parse_chart_spec(block: str) -> Optional[Dict]:
+    """Parse a ```chart``` code block into a spec dict."""
+    spec = {}
+    for line in block.strip().split("\n"):
+        line = line.strip()
+        if ":" not in line:
+            continue
+        key, _, val = line.partition(":")
+        key = key.strip().lower()
+        val = val.strip()
+        # Parse list values: [a, b, c]
+        if val.startswith("[") and val.endswith("]"):
+            items = [v.strip().strip("'\"") for v in val[1:-1].split(",")]
+            # Try to convert to numbers
+            parsed = []
+            for item in items:
+                try:
+                    parsed.append(float(item))
+                except ValueError:
+                    parsed.append(item)
+            spec[key] = parsed
+        else:
+            try:
+                spec[key] = float(val)
+            except ValueError:
+                spec[key] = val
+    return spec if spec.get("type") else None
+
+
+def _render_chart(spec: Dict) -> Optional[bytes]:
+    """Render a chart spec to PNG bytes using matplotlib."""
+    chart_type = spec.get("type", "").lower()
+    title = spec.get("title", "")
+
+    fig, ax = plt.subplots(figsize=(8, 4.5), dpi=150)
+    fig.patch.set_facecolor(_CHART_BG)
+    ax.set_facecolor(_CHART_BG)
+    ax.tick_params(colors=_CHART_TEXT, labelsize=10)
+    ax.set_title(title, fontsize=14, fontweight='bold', color=_CHART_TEXT, pad=12)
+
+    try:
+        if chart_type in ("line", "scatter"):
+            x_vals = spec.get("x_values", [])
+            if not x_vals:
+                plt.close(fig)
+                return None
+            x = np.array([float(v) for v in x_vals])
+
+            # Render multiple series
+            series_idx = 0
+            for suffix in ["", "2", "3", "4"]:
+                y_key = f"y_values{suffix}" if suffix else "y_values"
+                label_key = f"series_label{suffix}" if suffix else "series_label"
+                if y_key not in spec:
+                    continue
+                y = np.array([float(v) for v in spec[y_key]])
+                label = spec.get(label_key, f"Series {series_idx + 1}")
+                color = _CHART_COLORS[series_idx % len(_CHART_COLORS)]
+
+                if chart_type == "line":
+                    # Plot smooth curve if enough points
+                    if len(x) >= 4:
+                        x_smooth = np.linspace(x.min(), x.max(), 200)
+                        coeffs = np.polyfit(x, y, min(len(x) - 1, 6))
+                        y_smooth = np.polyval(coeffs, x_smooth)
+                        ax.plot(x_smooth, y_smooth, color=color, linewidth=2.5, label=label)
+                    else:
+                        ax.plot(x, y, color=color, linewidth=2.5, label=label)
+                    ax.scatter(x, y, color=color, s=40, zorder=5)
+                else:
+                    ax.scatter(x, y, color=color, s=60, label=label, zorder=5)
+                series_idx += 1
+
+            ax.axhline(y=0, color=_CHART_GRID, linewidth=0.8, zorder=1)
+            ax.axvline(x=0, color=_CHART_GRID, linewidth=0.8, zorder=1)
+            ax.grid(True, alpha=0.3, color=_CHART_GRID)
+            if series_idx > 1:
+                ax.legend(fontsize=10, loc='best')
+
+            # Annotate labeled points
+            labels = spec.get("labels", spec.get("point_labels", []))
+            if isinstance(labels, list):
+                pts_x = spec.get("x_values", [])
+                pts_y = spec.get("y_values", [])
+                for i, lbl in enumerate(labels):
+                    if i < len(pts_x) and i < len(pts_y) and str(lbl).strip():
+                        ax.annotate(str(lbl), (float(pts_x[i]), float(pts_y[i])),
+                                    textcoords="offset points", xytext=(0, 12),
+                                    ha='center', fontsize=9, color=_CHART_TEXT,
+                                    fontweight='bold',
+                                    bbox=dict(boxstyle='round,pad=0.3',
+                                              facecolor='white', edgecolor=_CHART_GRID))
+
+        elif chart_type == "bar":
+            categories = [str(c) for c in spec.get("categories", [])]
+            values = [float(v) for v in spec.get("values", [])]
+            if not categories or not values:
+                plt.close(fig)
+                return None
+            colors = [_CHART_COLORS[i % len(_CHART_COLORS)] for i in range(len(categories))]
+            bars = ax.bar(categories, values, color=colors, width=0.6, edgecolor='white')
+            for bar, val in zip(bars, values):
+                ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + max(values)*0.02,
+                        f'{val:g}', ha='center', va='bottom', fontsize=10,
+                        fontweight='bold', color=_CHART_TEXT)
+            ax.set_ylabel(spec.get("series_label", ""), fontsize=11, color=_CHART_TEXT)
+            ax.grid(axis='y', alpha=0.3, color=_CHART_GRID)
+
+        elif chart_type == "number_line":
+            mn = float(spec.get("min", -10))
+            mx = float(spec.get("max", 10))
+            points = [float(p) for p in spec.get("points", [])]
+            point_labels = [str(l) for l in spec.get("point_labels", [])]
+
+            fig, ax = plt.subplots(figsize=(8, 2), dpi=150)
+            fig.patch.set_facecolor(_CHART_BG)
+            ax.set_facecolor(_CHART_BG)
+            ax.set_title(title, fontsize=14, fontweight='bold', color=_CHART_TEXT, pad=8)
+
+            ax.arrow(mn - 0.5, 0, (mx - mn + 1), 0, head_width=0.15, head_length=0.2,
+                     fc=_CHART_TEXT, ec=_CHART_TEXT, linewidth=1.5)
+            ax.set_xlim(mn - 1, mx + 1)
+            ax.set_ylim(-0.8, 0.8)
+
+            # Tick marks
+            for t in range(int(mn), int(mx) + 1):
+                ax.plot([t, t], [-0.1, 0.1], color=_CHART_TEXT, linewidth=1)
+                ax.text(t, -0.3, str(t), ha='center', fontsize=9, color=_CHART_TEXT)
+
+            # Highlighted points
+            for i, p in enumerate(points):
+                ax.plot(p, 0, 'o', markersize=12, color=_CHART_COLORS[0], zorder=5)
+                lbl = point_labels[i] if i < len(point_labels) else ""
+                if lbl:
+                    ax.text(p, 0.4, lbl, ha='center', fontsize=10, fontweight='bold',
+                            color=_CHART_COLORS[0])
+
+            ax.axis('off')
+
+        elif chart_type == "comparison":
+            left_title = spec.get("left_title", "A")
+            right_title = spec.get("right_title", "B")
+            left_items = [str(i) for i in spec.get("left_items", [])]
+            right_items = [str(i) for i in spec.get("right_items", [])]
+
+            fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8, 4), dpi=150)
+            fig.patch.set_facecolor(_CHART_BG)
+            fig.suptitle(title, fontsize=14, fontweight='bold', color=_CHART_TEXT, y=0.98)
+
+            for ax_panel, panel_title, items, color in [
+                (ax1, left_title, left_items, _CHART_COLORS[0]),
+                (ax2, right_title, right_items, _CHART_COLORS[1]),
+            ]:
+                ax_panel.set_facecolor('white')
+                ax_panel.set_xlim(0, 1)
+                ax_panel.set_ylim(0, 1)
+                ax_panel.axis('off')
+
+                # Title bar
+                ax_panel.add_patch(plt.Rectangle((0, 0.85), 1, 0.15,
+                                                  facecolor=color, transform=ax_panel.transAxes))
+                ax_panel.text(0.5, 0.92, panel_title, ha='center', va='center',
+                              fontsize=13, fontweight='bold', color='white',
+                              transform=ax_panel.transAxes)
+
+                # Items
+                n = len(items)
+                for j, item in enumerate(items):
+                    y_pos = 0.78 - j * (0.75 / max(n, 1))
+                    ax_panel.text(0.08, y_pos, f"\u2022 {item}", fontsize=10,
+                                  va='top', color=_CHART_TEXT, transform=ax_panel.transAxes,
+                                  wrap=True)
+
+                # Border
+                for spine in ax_panel.spines.values():
+                    spine.set_visible(True)
+                    spine.set_color(_CHART_GRID)
+
+            plt.tight_layout(rect=[0, 0, 1, 0.95])
+
+        else:
+            plt.close(fig)
+            return None
+
+        if chart_type not in ("comparison",):
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_color(_CHART_GRID)
+            ax.spines['bottom'].set_color(_CHART_GRID)
+
+        plt.tight_layout()
+        buf = io.BytesIO()
+        fig.savefig(buf, format='png', bbox_inches='tight', facecolor=fig.get_facecolor())
+        plt.close(fig)
+        buf.seek(0)
+        return buf.getvalue()
+
+    except Exception:
+        plt.close(fig)
+        return None
+
+
+def _extract_chart_blocks(text: str) -> Tuple[str, List[Dict]]:
+    """Extract ```chart``` blocks from content text. Returns (cleaned_text, chart_specs)."""
+    charts = []
+    cleaned = text
+    for match in re.finditer(r'```chart\s*\n(.*?)```', text, re.DOTALL):
+        spec = _parse_chart_spec(match.group(1))
+        if spec:
+            charts.append(spec)
+        cleaned = cleaned.replace(match.group(0), "")
+    return cleaned.strip(), charts
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -225,7 +458,7 @@ def slide_objectives(prs, objectives, duration):
 
 def slide_content(prs, title, items, notes_text="", time_str=None,
                   bar_color=S_NAVY, bg_color=S_CREAM):
-    """Standard content slide: header bar + bullet points."""
+    """Standard content slide: header bar + bullet points + optional chart."""
     s = _blank(prs)
     _bg(s, bg_color)
     _header_bar(s, title, fill=bar_color, time_str=time_str)
@@ -233,6 +466,27 @@ def slide_content(prs, title, items, notes_text="", time_str=None,
         _bullets(s, items[:5], Inches(0.6), Inches(1.1), Inches(8.8), Inches(4.0),
                  font=SANS, sz=16, color=S_TEXT)
     _notes(s, notes_text)
+    return s
+
+
+def slide_visual(prs, chart_spec, bar_color=S_NAVY, bg_color=S_CREAM):
+    """Render a chart spec as an image slide."""
+    img_bytes = _render_chart(chart_spec)
+    if not img_bytes:
+        return None
+    s = _blank(prs)
+    _bg(s, bg_color)
+    title = chart_spec.get("title", "")
+    if title:
+        _header_bar(s, title, fill=bar_color)
+        img_top = Inches(1.0)
+        img_h = Inches(4.4)
+    else:
+        img_top = Inches(0.2)
+        img_h = Inches(5.2)
+    # Center the image
+    img_stream = io.BytesIO(img_bytes)
+    s.shapes.add_picture(img_stream, Inches(0.6), img_top, Inches(8.8), img_h)
     return s
 
 
@@ -504,27 +758,44 @@ def _split_lessons(content: str) -> List[str]:
 def _build_lesson_slides(prs, sections: Dict[str, str]):
     """Build slides for one lesson's worth of content sections."""
 
+    # Extract chart blocks from all sections upfront
+    cleaned_sections = {}
+    all_charts = {}
+    for key, raw in sections.items():
+        cleaned, charts = _extract_chart_blocks(raw)
+        cleaned_sections[key] = cleaned
+        if charts:
+            all_charts[key] = charts
+
     # Do Now
     if "Do Now" in sections:
-        raw = sections["Do Now"]
+        raw = cleaned_sections.get("Do Now", sections["Do Now"])
         items = _get_bullets(raw) or _get_paras(raw, 3)
         slide_content(prs, "Do Now", items, notes_text=raw,
                       time_str=_get_time(raw) or "5 min", bg_color=S_WHITE)
+        for chart in all_charts.get("Do Now", []):
+            slide_visual(prs, chart)
 
     # Framing
     if "Framing" in sections:
-        raw = sections["Framing"]
+        raw = cleaned_sections.get("Framing", sections["Framing"])
         items = _get_bullets(raw) or _get_paras(raw, 4)
         slide_content(prs, "Why This Matters", items,
                       notes_text=raw, time_str="3 min")
+        for chart in all_charts.get("Framing", []):
+            slide_visual(prs, chart)
 
-    # Core Content — vocabulary cards + tables + concept bullets
+    # Core Content — vocabulary cards + charts + tables + concept bullets
     if "Core Content" in sections:
-        raw = sections["Core Content"]
+        raw = cleaned_sections.get("Core Content", sections["Core Content"])
         vocab = _get_bold_terms(raw)
         if vocab:
             slide_cards(prs, "Key Vocabulary",
                         [(t, d) for t, d in vocab[:4]])
+
+        # Render any chart visuals
+        for chart in all_charts.get("Core Content", []):
+            slide_visual(prs, chart)
 
         # Detect and render markdown tables as slide tables
         table_lines = [l for l in raw.split("\n") if l.strip().startswith("|")]
@@ -544,7 +815,7 @@ def _build_lesson_slides(prs, sections: Dict[str, str]):
             chunk = items[chunk_start:chunk_start + 5]
             if chunk:
                 lbl = "Key Concepts" if chunk_start == 0 else "Key Concepts (continued)"
-                slide_content(prs, lbl, chunk, notes_text=raw)
+                slide_content(prs, lbl, chunk, notes_text=sections["Core Content"])
 
     # Discussion
     if "Discussion Prompts" in sections:
