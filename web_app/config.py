@@ -9,6 +9,7 @@ DARK_GREEN = "#00582c"
 LIGHT_GREEN = "#4DAE58"
 WHITE = "#FFFFFF"
 CLAUDE_MODEL = "claude-opus-4-6"
+CLAUDE_MODEL_LIGHT = "claude-sonnet-4-5-20250929"
 
 # ─── Mission Context ───────────────────────────────────────────────────────────
 

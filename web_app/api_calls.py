@@ -11,6 +11,7 @@ import streamlit as st
 
 from config import (
     CLAUDE_MODEL,
+    CLAUDE_MODEL_LIGHT,
     PERSONAS,
     LESSON_TYPES,
     DISCOVERY_PRINCIPLE,
@@ -102,7 +103,7 @@ Simply READING or EXPERIENCING a text is acquiring new KNOWLEDGE. COMPARING, INT
 Return ONLY the JSON object."""
 
     response = client.messages.create(
-        model=CLAUDE_MODEL,
+        model=CLAUDE_MODEL_LIGHT,
         max_tokens=2000,
         system=KNOWLEDGE_SKILLS_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
@@ -278,7 +279,7 @@ Give 2-3 concerns per persona. Be specific — reference actual lesson segments,
 Return ONLY the JSON object."""
 
     response = client.messages.create(
-        model=CLAUDE_MODEL,
+        model=CLAUDE_MODEL_LIGHT,
         max_tokens=3000,
         system=PERSONA_FEEDBACK_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
@@ -328,7 +329,7 @@ Example format:
 Return ONLY the bullet points, no other text."""
 
     response = client.messages.create(
-        model=CLAUDE_MODEL,
+        model=CLAUDE_MODEL_LIGHT,
         max_tokens=1000,
         system=PROMPT_ADDITIONS_SYSTEM_PROMPT,
         messages=[{"role": "user", "content": prompt}],
