@@ -15,11 +15,13 @@ from config import (
     LESSON_TYPES,
     DISCOVERY_PRINCIPLE,
     MARZANO_SUMMARY,
+    MISSION_CONTEXT,
     KNOWLEDGE_SKILLS_SYSTEM_PROMPT,
     LESSON_PLAN_SYSTEM_PROMPT,
     PERSONA_FEEDBACK_SYSTEM_PROMPT,
     PROMPT_ADDITIONS_SYSTEM_PROMPT,
     CONTENT_GENERATION_SYSTEM_PROMPT,
+    CONTENT_OUTPUT_FORMAT,
 )
 
 
@@ -195,7 +197,7 @@ LESSON TYPE STRUCTURE — Follow this structure for each {lesson_type} lesson:
     response = client.messages.create(
         model=CLAUDE_MODEL,
         max_tokens=4000 * num_lessons,
-        system=LESSON_PLAN_SYSTEM_PROMPT,
+        system=LESSON_PLAN_SYSTEM_PROMPT.format(mission_context=MISSION_CONTEXT),
         messages=[{"role": "user", "content": prompt}],
     )
 
@@ -305,8 +307,8 @@ def generate_prompt_additions(persona_feedback: dict, lesson_plan: str) -> str:
 
     prompt = f"""Based on this persona feedback about a lesson plan, generate concise, actionable additions the teacher should incorporate into the final lesson prompt.
 
-LESSON PLAN SUMMARY:
-{lesson_plan[:2000]}
+LESSON PLAN:
+{lesson_plan}
 
 PERSONA FEEDBACK:
 {feedback_text}
@@ -376,7 +378,8 @@ def generate_lesson_content(
     if differentiate_advanced:
         diff_section += "\nDIFFERENTIATION — ADVANCED LEARNERS: Also generate extension content for advanced learners. Include deeper analytical questions, research prompts, and open-ended challenges. Mark this content clearly under a ## Extension Content (Advanced Learners) header.\n"
 
-    system = CONTENT_GENERATION_SYSTEM_PROMPT.format(discovery_principle=DISCOVERY_PRINCIPLE)
+    system = CONTENT_GENERATION_SYSTEM_PROMPT.format(mission_context=MISSION_CONTEXT)
+    output_format = CONTENT_OUTPUT_FORMAT.format(discovery_principle=DISCOVERY_PRINCIPLE)
 
     # Format objectives
     if len(daily_objectives) == 1:
@@ -410,6 +413,8 @@ TEACHER-APPROVED PROMPT ADDITIONS (incorporate all of these):
 
 {MARZANO_SUMMARY}
 {diff_section}
+{output_format}
+
 Generate ALL content blocks now. Remember: you are building the actual physical materials for tomorrow's class. Every slide will be projected to students. Every worksheet will be printed for students to write on. Every station card will be cut out and placed on a table. The ## Lesson Plan is the only section the teacher sees privately — answer keys, timing, and facilitation notes go there and nowhere else.
 
 The ## Worksheet Content section must have ### sub-sections covering every activity where students produce written work. This is the student's primary document for the entire lesson.
